@@ -36,18 +36,43 @@ def _clean(text):
     return " ".join(text.replace("’", "'").replace("‑", "-").split())
 
 
-NO_SPONSOR = re.compile(r"\b(without|not|no|unable|cannot|can't|won't|never|ineligible|unavailable)\b", re.I)
+NEGATIVE = re.compile(r"\b(without|not|no|unable|cannot|can't|won't|never|ineligible|unavailable)\b", re.I)
+CITIZEN = re.compile(r"citizen|green ?card|permanent resident|\bu\.?s\.? persons?\b|\bitar\b", re.I)
+REQUIRED = re.compile(r"\b(must|required?|requires|requirement|only|need|needs|eligible|obtain)\b", re.I)
+CLEARANCE = re.compile(r"security clearance|secret clearance|\bts/sci\b|public trust", re.I)
+# equal opportunity and e-verify text mentions citizenship without restricting it
+BOILERPLATE = re.compile(r"regard|discriminat|equal (employment )?opportunity|e-verify|\bi-9\b|protected", re.I)
+STUDENT = re.compile(r"currently enrolled|current(ly)? (a )?(student|pursuing)|pursuing an? (bachelor|master|undergrad|graduate|degree)"
+                     r"|rising (junior|senior)|returning to school|enrolled in an? (accredited )?(university|college|degree)"
+                     r"|expected graduation|graduation date", re.I)
+
+
+def _sentences(text):
+    text = re.sub(r"\bU\.\s?S\.(\s?A\.)?|\be\.g\.|\bi\.e\.", lambda m: m.group(0).replace(".", ""), text.replace("’", "'"))
+    return [" ".join(s.split()) for s in re.split(r"(?<=[.!?;])\s+|\n", text) if s.strip()]
 
 
 def dealbreakers(text, f):
-    low = _clean(text).lower()
-    found = [p for p in f["dealbreakers"] if p.lower() in low]
-    # catches wordings like "sponsorship for this role is not being offered"
-    for sentence in [] if found else re.split(r"(?<=[.!?;])\s+|\n", text.replace("’", "'")):
-        if re.search(r"sponsor", sentence, re.I) and NO_SPONSOR.search(sentence):
-            found.append("no sponsorship: " + " ".join(sentence.split())[:120])
-            break
-    return found
+    phrases = [p.lower() for p in f["dealbreakers"]]
+    for s in _sentences(text):
+        if BOILERPLATE.search(s):
+            continue
+        low = s.lower()
+        no_clearance = re.search(r"not required|no (security )?clearance", s, re.I)
+        hit = next((p for p in phrases if p in low and not (no_clearance and "clearance" in p)), None)
+        if not hit and re.search(r"sponsor", s, re.I) and NEGATIVE.search(s):
+            hit = "no sponsorship"
+        if not hit and CITIZEN.search(s) and REQUIRED.search(s):
+            hit = "citizenship or green card required"
+        if not hit and CLEARANCE.search(s) and not no_clearance:
+            hit = "clearance"
+        if hit:
+            return [f"{hit}: {s[:120]}"]
+    return []
+
+
+def student_only(title, text):
+    return bool(re.search(r"\bintern(ship)?\b|co-op", title, re.I) and STUDENT.search(text))
 
 
 def min_years(text):

@@ -1,4 +1,4 @@
-from filters import dealbreakers, html_to_text, location_ok, min_years, pay, title_ok
+from filters import dealbreakers, html_to_text, location_ok, min_years, pay, student_only, title_ok
 
 F = {
     "title_include": ["analyst", "data engineer", "sql"],
@@ -37,19 +37,20 @@ def test_locations():
 
 
 def test_dealbreakers():
-    assert dealbreakers("We are UNABLE TO SPONSOR visas", F) == ["unable to sponsor"]
-    assert dealbreakers("Must be authorized to work in the US", F) == []
-    assert dealbreakers("requires an active\nsecurity   clearance", F) == ["security clearance"]
-
-
-def test_sponsorship_sentences():
     blocked = [
+        "We are UNABLE TO SPONSOR visas",
         "Candidates must be eligible to work in the United States without sponsorship.",
         "Sponsorship for this role is not being offered at this time.",
         "We cannot sponsor visas for this position.",
         "This role is ineligible for visa sponsorship.",
         "Visa sponsorship is unavailable.",
-        "The company won't sponsor work visas.",
+        "The company won’t sponsor work visas.",
+        "Candidates must be a U.S. Citizen or Permanent Resident.",
+        "This position requires US citizenship.",
+        "Open to green card holders only.",
+        "Must be a U.S. person as defined by ITAR.",
+        "Requires an active Secret clearance.",
+        "Ability to obtain a security clearance.",
     ]
     for s in blocked:
         assert dealbreakers(s, F), s
@@ -58,9 +59,20 @@ def test_sponsorship_sentences():
         "Any sponsorship considerations are subject to company policy.",
         "We offer visa sponsorship for qualified candidates.",
         "Must be authorized to work in the US.",
+        "We consider all applicants without regard to race, national origin or citizenship status.",
+        "We participate in E-Verify and must confirm the identity of U.S. citizens and noncitizens.",
+        "No security clearance required.",
+        "Coordinate customs clearance for imports.",
     ]
     for s in allowed:
         assert dealbreakers(s, F) == [], s
+
+
+def test_student_only():
+    assert student_only("Data Analyst Intern", "Must be currently enrolled in a degree program.")
+    assert student_only("Summer Internship - Data", "Rising senior pursuing a bachelor's degree.")
+    assert not student_only("Data Analyst Intern", "Bachelor's degree in a related field.")
+    assert not student_only("Data Analyst", "Must be currently enrolled in a degree program.")
 
 
 def test_min_years():

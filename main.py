@@ -47,7 +47,7 @@ def check(company, f):
         jd = fetchers.fetch_detail(company, job)
         text = flt.html_to_text(jd)
         years = flt.min_years(text)
-        if flt.dealbreakers(text, f) or (years is not None and years > 3):
+        if flt.dealbreakers(text, f) or flt.student_only(job.title, text) or (years is not None and years > 3):
             db.save_jobs([_row(company, job)])
             continue
         repost = db.is_repost(company["id"], job.title, job.location)
