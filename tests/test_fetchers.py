@@ -203,3 +203,14 @@ def test_consider_reads_description_from_workday_apply_link(monkeypatch):
     j = Job("bain:1", "Cyber Analyst", "United States", url, {"minYearsExp": None}, "Guidehouse")
     assert fetchers.fetch_detail({"platform": "consider"}, j) == "<p>Public Trust</p>"
     assert calls[0][1] == "https://guidehouse.wd1.myworkdayjobs.com/wday/cxs/guidehouse/External/job/US---Remote/Cyber-Analyst_45309"
+
+
+def test_vc_boards_skip_linkedin_copies(monkeypatch):
+    calls = []
+    us = ["New York, NY, USA", "United States"]
+    posts = [{"id": 1, "title": "ML Intern", "locations": us[:1], "url": "https://www.linkedin.com/jobs/view/1",
+              "organization": {"name": "Scale AI"}, "searchable_locations": us},
+             {"id": 2, "title": "Data Analyst", "locations": us[:1], "url": "https://job-boards.greenhouse.io/x/jobs/2",
+              "organization": {"name": "X"}, "searchable_locations": us}]
+    monkeypatch.setattr(fetchers, "http", fake_http({"search/jobs": Resp({"results": {"jobs": posts, "count": 2}})}, calls))
+    assert [j.id for j in fetchers.fetch_list({"platform": "getro", "board": "jobs.accel.com/8672"})] == ["2"]

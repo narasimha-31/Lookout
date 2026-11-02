@@ -244,6 +244,11 @@ def _smartrecruiters_detail(c, job):
                    for k in ("jobDescription", "qualifications", "additionalInformation"))
 
 
+def _from_linkedin(job):
+    # vc boards copy some jobs from linkedin, often weeks old and with no real posting behind them
+    return "linkedin.com" in (job.url or "")
+
+
 def _consider_list(c):
     host, board = c["board"].split("/", 1)
     s = requests.Session()
@@ -260,7 +265,7 @@ def _consider_list(c):
                      p.get("applyUrl") or p.get("url"), p, p.get("companyName", "")) for p in posts]
         seq = (data.get("meta") or {}).get("sequence")
         if not posts or not seq or len(jobs) >= min(_cap(c), data.get("total", 0)):
-            return jobs
+            return [j for j in jobs if not _from_linkedin(j)]
         meta = {"size": 100, "sequence": seq}
 
 
@@ -313,7 +318,8 @@ def _getro_list(c):
         page += 1
         if not posts or len(jobs) >= min(_cap(c), res.get("count", 0)):
             # getro tags each job with countries, keep only the ones it places in the US
-            return [j for j in jobs if "United States" in (j.raw.get("searchable_locations") or [])]
+            return [j for j in jobs if "United States" in (j.raw.get("searchable_locations") or [])
+                    and not _from_linkedin(j)]
 
 
 def _getro_detail(c, job):
