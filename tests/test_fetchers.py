@@ -249,3 +249,16 @@ def test_phenom(monkeypatch):
     assert j.location == "Rosemont, Illinois, United States; Houston, Texas, United States"
     assert calls[0][2]["params"] == {"size": 100, "from": 0}
     assert fetchers.fetch_detail(c, j) == "<p>2 years</p>"
+
+
+def test_sfxml(monkeypatch):
+    calls = []
+    feed = ("<Job-Listing><Job><JobTitle><![CDATA[Data Analyst &amp; BI]]></JobTitle>"
+            "<Job-Description><![CDATA[<p>Irvine, CA</p>]]></Job-Description><ReqId>1456</ReqId></Job></Job-Listing>")
+    monkeypatch.setattr(fetchers, "http", fake_http({"/career": Resp(text=feed)}, calls))
+    c = {"platform": "sfxml", "board": "career8.successfactors.com/kia1"}
+    j = fetchers.fetch_list(c)[0]
+    assert (j.id, j.title) == ("1456", "Data Analyst & BI")
+    assert j.url == "https://career8.successfactors.com/career?company=kia1&career_job_req_id=1456&career_ns=job_listing"
+    assert calls[0][2]["params"]["company"] == "kia1"
+    assert fetchers.fetch_detail(c, j) == "<p>Irvine, CA</p>"
