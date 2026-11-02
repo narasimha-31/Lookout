@@ -21,7 +21,8 @@ def _place_ok(place, f):
     # two-letter state codes only count in capitals
     codes = [t for t in allowed if len(t) == 2 and t.isupper()]
     names = [t for t in allowed if t not in codes]
-    if _matches(names, place) or _matches(codes, place, 0):
+    # "(DE)" style country codes are not states
+    if _matches(names, place) or _matches(codes, re.sub(r"\([A-Z]{2}\)", "", place), 0):
         return True
     return not _matches(f["locations_blocked"], place)
 

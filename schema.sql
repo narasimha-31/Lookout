@@ -85,5 +85,5 @@ insert into filters values (
         'Thailand', 'Malaysia', 'Indonesia', 'New Zealand', 'Jamaica', 'Trinidad', 'Guyana', 'Colombia',
         'Argentina', 'Chile', 'Peru', 'Costa Rica', 'Israel', 'Pakistan',
         'GBR', 'BGR', 'IND', 'CAN', 'MEX', '(GB)', '(UK)', '(ES)', '(FR)', '(IT)', '(DE)', '(NL)', '(IE)',
-        '(CN)', '(JP)', '(NZ)', '(AU)']
+        '(CN)', '(JP)', '(NZ)', '(AU)', '(IN)', '(CA)']
 );

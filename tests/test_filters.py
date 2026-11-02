@@ -5,7 +5,7 @@ F = {
     "title_exclude": ["senior", "sr", "lead", "manager"],
     "dealbreakers": ["unable to sponsor", "no sponsorship", "security clearance"],
     "locations_allowed": ["United States", "USA", "US", "Texas", "TX", "CA"],
-    "locations_blocked": ["Canada", "India"],
+    "locations_blocked": ["Canada", "India", "(DE)", "(CA)"],
 }
 
 
@@ -30,6 +30,9 @@ def test_locations():
     assert not location_ok("Toronto, ON, Canada", F)
     assert not location_ok("Remote - India", F)
     assert not location_ok("Leduc, AB, Canada", F)
+    assert not location_ok("Munich (DE)", F)
+    assert not location_ok("Toronto (CA)", F)
+    assert location_ok("San Diego, CA", F)
     assert location_ok("Austin, tx area", F) is True  # names match any case, unclear passes
 
 
