@@ -70,11 +70,22 @@ def count(table, **params):
     return int(r.headers.get("Content-Range", "*/0").split("/")[-1])
 
 
-def prune(days=90):
-    # jobs that failed the filters would fail again if they came back, so old ones can go
+def prune(keep, days=90):
+    # old unsent rows whose title can never match are safe to forget; the rest stay as history
     cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
-    http("DELETE", _url("seen_jobs"), headers=_headers("return=minimal"),
-         params={"emailed": "eq.false", "first_seen_at": f"lt.{cutoff}"})
+    doomed, last = [], 0
+    while True:
+        rows = http("GET", _url("seen_jobs"), headers=_headers(), params={
+            "select": "id,title", "emailed": "eq.false", "first_seen_at": f"lt.{cutoff}",
+            "id": f"gt.{last}", "order": "id", "limit": "1000"}).json()
+        if not rows:
+            break
+        last = rows[-1]["id"]
+        doomed += [r["id"] for r in rows if not keep(r["title"] or "")]
+    for i in range(0, len(doomed), 200):
+        http("DELETE", _url("seen_jobs"), headers=_headers("return=minimal"),
+             params={"id": f"in.({','.join(map(str, doomed[i:i + 200]))})"})
+    return len(doomed)
 
 
 def failing():
