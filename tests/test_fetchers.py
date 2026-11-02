@@ -135,3 +135,17 @@ def test_lever_detail_joins_sections():
                                             "lists": [{"text": "Needs", "content": "<li>SQL</li>"}],
                                             "additional": "<p>B</p>"})
     assert fetchers.fetch_detail({"platform": "lever"}, j) == "<p>A</p><h3>Needs</h3><ul><li>SQL</li></ul><p>B</p>"
+
+
+def test_getro_keeps_startup_name(monkeypatch):
+    calls = []
+    post = {"id": 5, "title": "Data Analyst", "locations": ["Austin, TX, USA"], "url": "https://x/5",
+            "organization": {"name": "Startup Co"}}
+    monkeypatch.setattr(fetchers, "http", fake_http({"search/jobs": Resp({"results": {"jobs": [post], "count": 1}})}, calls))
+    jobs = fetchers.fetch_list({"platform": "getro", "board": "8672"})
+    assert (jobs[0].id, jobs[0].company, jobs[0].location) == ("5", "Startup Co", "Austin, TX, USA")
+
+
+def test_consider_years_from_field():
+    j = Job("a:1", "Data Analyst", "Austin, TX", "u", {"minYearsExp": 2}, "Startup Co")
+    assert fetchers.fetch_detail({"platform": "consider"}, j) == "<p>Minimum 2 years of experience</p>"

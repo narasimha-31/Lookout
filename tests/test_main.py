@@ -141,3 +141,11 @@ def test_crash_prints_no_details(world, monkeypatch, capsys):
         runpy.run_module("main", run_name="__main__")
     out = capsys.readouterr().out
     assert "secret" not in out
+
+
+def test_portfolio_email_names_startup(world):
+    world["jobs"] = [Job("1", "Data Analyst", "Austin, TX", "https://x/1", {}, "Startup Co")]
+    world["jd"] = {"1": ""}
+    c = {**company(), "name": "Accel portfolio"}
+    assert main.check(c, F)[0] == 1
+    assert world["sent"] == ["New role at Startup Co (via Accel portfolio): Data Analyst, Austin, TX"]

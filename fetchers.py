@@ -16,13 +16,16 @@ class Job:
     location: str
     url: str
     raw: dict = field(default_factory=dict, repr=False)
+    # set on vc portfolio boards, where one board lists many startups
+    company: str = ""
 
 
 def http(method, url, **kw):
     headers = {"User-Agent": UA, "Accept": "application/json", **kw.pop("headers", {})}
     for attempt in (1, 2):
         try:
-            r = requests.request(method, url, headers=headers, timeout=20, **kw)
+            r = (kw.get("session") or requests).request(method, url, headers=headers, timeout=20,
+                                                       **{k: v for k, v in kw.items() if k != "session"})
             r.raise_for_status()
             return r
         except requests.RequestException as e:
@@ -241,11 +244,56 @@ def _smartrecruiters_detail(c, job):
                    for k in ("jobDescription", "qualifications", "additionalInformation"))
 
 
+def _consider_list(c):
+    host, board = c["board"].split("/", 1)
+    s = requests.Session()
+    page = http("GET", f"https://{host}/jobs", session=s, headers={"Accept": "text/html"}).text
+    token = re.search(r'csrf[^"]*"\s*:\s*"([^"]+)"', page) or re.search(r'name="csrf-token" content="([^"]+)"', page)
+    headers = {"x-csrf-token": token.group(1) if token else "", "Referer": f"https://{host}/jobs"}
+    jobs, meta = [], {"size": 100}
+    while True:
+        data = http("POST", f"https://{host}/api-boards/search-jobs", session=s, headers=headers, json={
+            "meta": meta, "board": {"id": board, "isParent": True}, "query": {"locations": ["United States"]},
+            "grouped": False}).json()
+        posts = data.get("jobs") or []
+        jobs += [Job(f"{p.get('companySlug')}:{p['jobId']}", p["title"], "; ".join(x.strip() for x in p.get("locations") or []),
+                     p.get("applyUrl") or p.get("url"), p, p.get("companyName", "")) for p in posts]
+        seq = (data.get("meta") or {}).get("sequence")
+        if not posts or not seq or len(jobs) >= min(_cap(c), data.get("total", 0)):
+            return jobs
+        meta = {"size": 100, "sequence": seq}
+
+
+def _consider_detail(c, job):
+    # consider has no description, only a minimum years field
+    years = job.raw.get("minYearsExp")
+    return f"<p>Minimum {years} years of experience</p>" if years else ""
+
+
+def _getro_list(c):
+    jobs, page = [], 0
+    while True:
+        data = http("POST", f"https://api.getro.com/api/v2/collections/{c['board']}/search/jobs",
+                    json={"hitsPerPage": 100, "page": page, "filters": "", "query": ""}).json()
+        res = data.get("results") or {}
+        posts = res.get("jobs") or []
+        jobs += [Job(str(p["id"]), p["title"], "; ".join(p.get("locations") or []), p["url"], p,
+                     (p.get("organization") or {}).get("name", "")) for p in posts]
+        page += 1
+        if not posts or len(jobs) >= min(_cap(c), res.get("count", 0)):
+            return jobs
+
+
+def _getro_detail(c, job):
+    return ""
+
+
 LIST = {"greenhouse": _greenhouse_list, "lever": _lever_list, "ashby": _ashby_list, "workday": _workday_list,
-        "ukg": _ukg_list, "workable": _workable_list, "oracle": _oracle_list, "smartrecruiters": _smartrecruiters_list}
+        "ukg": _ukg_list, "workable": _workable_list, "oracle": _oracle_list, "smartrecruiters": _smartrecruiters_list,
+        "consider": _consider_list, "getro": _getro_list}
 DETAIL = {"greenhouse": _greenhouse_detail, "lever": _lever_detail, "ashby": _ashby_detail, "workday": _workday_detail,
           "ukg": _ukg_detail, "workable": _workable_detail, "oracle": _oracle_detail,
-          "smartrecruiters": _smartrecruiters_detail}
+          "smartrecruiters": _smartrecruiters_detail, "consider": _consider_detail, "getro": _getro_detail}
 
 
 def fetch_list(company, newest=None):

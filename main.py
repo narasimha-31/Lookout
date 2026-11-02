@@ -11,6 +11,8 @@ import filters as flt
 import mail
 
 NEWEST = 200
+# vc boards list tens of thousands of jobs worldwide
+FIRST_CHECK = 2000
 
 
 def load_env(path=".env"):
@@ -32,7 +34,7 @@ def check(company, f):
     """Returns (emails sent, jobs listed)."""
     f = {**f, **{k: v for k, v in (company.get("overrides") or {}).items() if k in f}}
     # after the first check only the newest jobs matter
-    newest = None if not company["first_run_done"] else NEWEST
+    newest = NEWEST if company["first_run_done"] else FIRST_CHECK
     jobs = list({j.id: j for j in fetchers.fetch_list(company, newest)}.values())
 
     if not company["first_run_done"]:
@@ -59,9 +61,12 @@ def check(company, f):
         flags = [f"asks for {years} years" if years is not None else "no experience mentioned"]
         if repost:
             flags.append("possible repost")
+        if not text:
+            flags.append("no description on this board, check sponsorship on the posting")
+        name = f"{job.company} (via {company['name']})" if job.company else company["name"]
         first_seen = datetime.now(ZoneInfo("America/Chicago")).strftime("%b %d, %I:%M %p CT")
         # send before saving so a failed send is retried next run
-        mail.send(mail.job_email(company["name"], job, jd, flags, first_seen))
+        mail.send(mail.job_email(name, job, jd, flags, first_seen))
         db.save_jobs([_row(company, job, emailed=True, repost=repost)])
         sent += 1
     return sent, len(jobs)
