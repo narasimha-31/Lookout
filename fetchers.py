@@ -74,20 +74,26 @@ def _workday_base(c):
 def _workday_list(c):
     host, base = _workday_base(c)
     o = c.get("overrides") or {}
-    jobs, offset, total = [], 0, 0
-    while True:
-        data = http("POST", f"{base}/jobs", json={
-            "appliedFacets": o.get("workday_facets", {}), "limit": 20, "offset": offset,
-            "searchText": o.get("search_text", "")}).json()
-        posts = data.get("jobPostings") or []
-        # workday only reports total on the first page
-        total = data.get("total") or total
-        # workday sometimes sends blank placeholder postings
-        jobs += [Job(p["externalPath"], p.get("title", ""), p.get("locationsText", ""),
-                     f"https://{host}/{c['site']}{p['externalPath']}", p) for p in posts if p.get("externalPath")]
-        offset += 20
-        if not posts or offset >= total:
-            return jobs
+    jobs = {}
+    # huge boards get searched on workday's side, one term at a time
+    for term in o.get("search_texts") or [o.get("search_text", "")]:
+        offset, total = 0, 0
+        while True:
+            data = http("POST", f"{base}/jobs", json={
+                "appliedFacets": o.get("workday_facets", {}), "limit": 20, "offset": offset,
+                "searchText": term}).json()
+            posts = data.get("jobPostings") or []
+            # workday only reports total on the first page
+            total = data.get("total") or total
+            # workday sometimes sends blank placeholder postings
+            for p in posts:
+                if p.get("externalPath"):
+                    jobs[p["externalPath"]] = Job(p["externalPath"], p.get("title", ""), p.get("locationsText", ""),
+                                                  f"https://{host}/{c['site']}{p['externalPath']}", p)
+            offset += 20
+            if not posts or offset >= total:
+                break
+    return list(jobs.values())
 
 
 def _workday_detail(c, job):
@@ -191,10 +197,31 @@ def _oracle_detail(c, job):
                                             "ExternalQualificationsStr"))
 
 
-LIST = {"greenhouse": _greenhouse_list, "lever": _lever_list, "ashby": _ashby_list,
-        "workday": _workday_list, "ukg": _ukg_list, "workable": _workable_list, "oracle": _oracle_list}
-DETAIL = {"greenhouse": _greenhouse_detail, "lever": _lever_detail, "ashby": _ashby_detail,
-          "workday": _workday_detail, "ukg": _ukg_detail, "workable": _workable_detail, "oracle": _oracle_detail}
+def _smartrecruiters_list(c):
+    api = f"https://api.smartrecruiters.com/v1/companies/{c['board']}/postings"
+    jobs, offset = [], 0
+    while True:
+        data = http("GET", f"{api}?limit=100&offset={offset}").json()
+        posts = data.get("content") or []
+        jobs += [Job(p["id"], p["name"], (p.get("location") or {}).get("fullLocation", ""),
+                     f"https://jobs.smartrecruiters.com/{c['board']}/{p['id']}", p) for p in posts]
+        offset += 100
+        if not posts or offset >= data.get("totalFound", 0):
+            return jobs
+
+
+def _smartrecruiters_detail(c, job):
+    data = http("GET", f"https://api.smartrecruiters.com/v1/companies/{c['board']}/postings/{job.id}").json()
+    sections = (data.get("jobAd") or {}).get("sections") or {}
+    return "".join((sections.get(k) or {}).get("text") or ""
+                   for k in ("jobDescription", "qualifications", "additionalInformation"))
+
+
+LIST = {"greenhouse": _greenhouse_list, "lever": _lever_list, "ashby": _ashby_list, "workday": _workday_list,
+        "ukg": _ukg_list, "workable": _workable_list, "oracle": _oracle_list, "smartrecruiters": _smartrecruiters_list}
+DETAIL = {"greenhouse": _greenhouse_detail, "lever": _lever_detail, "ashby": _ashby_detail, "workday": _workday_detail,
+          "ukg": _ukg_detail, "workable": _workable_detail, "oracle": _oracle_detail,
+          "smartrecruiters": _smartrecruiters_detail}
 
 
 def fetch_list(company):

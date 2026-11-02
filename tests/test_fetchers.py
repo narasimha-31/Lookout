@@ -52,6 +52,20 @@ def test_workday_pages_and_facets(monkeypatch):
     assert jobs[0].url == "https://acme.wd5.myworkdayjobs.com/Careers/job/0"
 
 
+def test_workday_search_terms_merge(monkeypatch):
+    calls = []
+
+    def page(kw):
+        term = kw["json"]["searchText"]
+        ids = {"analyst": [1, 2], "data": [2, 3]}[term]
+        return Resp({"total": len(ids), "jobPostings": [{"externalPath": f"/job/{i}", "title": term} for i in ids]})
+
+    monkeypatch.setattr(fetchers, "http", fake_http({"/jobs": page}, calls))
+    c = {"platform": "workday", "board": "acme.wd5.myworkdayjobs.com/acme", "site": "Careers",
+         "overrides": {"search_texts": ["analyst", "data"]}}
+    assert sorted(j.id for j in fetchers.fetch_list(c)) == ["/job/1", "/job/2", "/job/3"]
+
+
 def test_ukg(monkeypatch):
     calls = []
     op = {"Id": "abc", "Title": "Data Analyst",
@@ -85,6 +99,20 @@ def test_oracle_pages(monkeypatch):
     assert len(jobs) == 30
     assert jobs[0].location == "Houston, TX, United States; Midland, TX"
     assert jobs[0].url == "https://abcd.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/job/0"
+    assert fetchers.fetch_detail(c, jobs[0]) == "<p>A</p><p>B</p>"
+
+
+def test_smartrecruiters(monkeypatch):
+    calls = []
+    post = {"id": "7", "name": "Data Analyst", "location": {"fullLocation": "Austin, TX, United States"}}
+    monkeypatch.setattr(fetchers, "http", fake_http({
+        "postings/7": Resp({"jobAd": {"sections": {"jobDescription": {"text": "<p>A</p>"},
+                                                   "qualifications": {"text": "<p>B</p>"}}}}),
+        "postings?": Resp({"content": [post], "totalFound": 1})}, calls))
+    c = {"platform": "smartrecruiters", "board": "acme"}
+    jobs = fetchers.fetch_list(c)
+    assert jobs[0].location == "Austin, TX, United States"
+    assert jobs[0].url == "https://jobs.smartrecruiters.com/acme/7"
     assert fetchers.fetch_detail(c, jobs[0]) == "<p>A</p><p>B</p>"
 
 
