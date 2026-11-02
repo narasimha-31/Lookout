@@ -1,4 +1,5 @@
 import os
+from datetime import datetime, timedelta, timezone
 
 from fetchers import http
 
@@ -67,6 +68,13 @@ def mark_first_run(company_id):
 def count(table, **params):
     r = http("GET", _url(table), headers=_headers("count=exact"), params={"select": "*", "limit": "1", **params})
     return int(r.headers.get("Content-Range", "*/0").split("/")[-1])
+
+
+def prune(days=90):
+    # jobs that failed the filters would fail again if they came back, so old ones can go
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    http("DELETE", _url("seen_jobs"), headers=_headers("return=minimal"),
+         params={"emailed": "eq.false", "first_seen_at": f"lt.{cutoff}"})
 
 
 def failing():

@@ -125,6 +125,7 @@ def heartbeat():
     body = (f"Watching {companies} companies.\nLast 24 hours: {seen} new postings seen, {emailed} emailed to you.\n"
             + ("\nFailing boards:\n" + "\n".join(bad) if bad else "\nAll job boards working."))
     mail.send(mail.notice(f"Lookout daily: {emailed} sent, {len(bad)} failing", body))
+    db.prune()
 
 
 def _health(company_id):
