@@ -37,9 +37,20 @@ def _places(location):
     return [p for p in re.split(r"[;|]", location) if p.strip()]
 
 
+def _bare_state(place, f):
+    name = re.sub(r",?\s*(USA|US|United States( of America)?)\s*$", "", place.strip(), flags=re.I).strip()
+    return name.lower() in {t.lower() for t in f["locations_allowed"] if len(t) > 3}
+
+
 def location_ok(location, f):
     places = _places(location)
-    return not places or any(_place_ok(p, f) for p in places)
+    if not places:
+        return True
+    ours = [p for p in places if _place_ok(p, f)]
+    # "Tennessee, USA; Chennai, India": a bare state next to foreign cities is usually a misread "TN" (Tamil Nadu)
+    if ours and len(ours) < len(places) and all(_bare_state(p, f) for p in ours):
+        return False
+    return bool(ours)
 
 
 def abroad(location, text, f):
