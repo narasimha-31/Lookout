@@ -10,6 +10,8 @@ import fetchers
 import filters as flt
 import mail
 
+NEWEST = 200
+
 
 def load_env(path=".env"):
     if not os.path.exists(path):
@@ -29,7 +31,9 @@ def _row(company, job, emailed=False, repost=False):
 def check(company, f):
     """Returns (emails sent, jobs listed)."""
     f = {**f, **{k: v for k, v in (company.get("overrides") or {}).items() if k in f}}
-    jobs = list({j.id: j for j in fetchers.fetch_list(company)}.values())
+    # after the first check only the newest jobs matter
+    newest = None if not company["first_run_done"] else NEWEST
+    jobs = list({j.id: j for j in fetchers.fetch_list(company, newest)}.values())
 
     if not company["first_run_done"]:
         db.save_jobs([_row(company, j) for j in jobs])

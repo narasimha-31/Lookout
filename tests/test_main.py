@@ -11,7 +11,7 @@ F = {"title_include": ["analyst"], "title_exclude": ["senior"], "dealbreakers": 
 def world(monkeypatch):
     w = {"jobs": [], "jd": {}, "saved": [], "sent": [], "health": {}, "marked": [], "fail": set(), "send_fails": False}
 
-    def fetch_list(c):
+    def fetch_list(c, newest=None):
         if c["id"] in w["fail"]:
             raise RuntimeError("boom https://secret.example/jobs")
         return w["jobs"]

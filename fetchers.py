@@ -71,6 +71,10 @@ def _ashby_detail(c, job):
     return job.raw.get("descriptionHtml") or ""
 
 
+def _cap(c):
+    return c.get("newest") or float("inf")
+
+
 def _terms(c):
     o = c.get("overrides") or {}
     return o.get("search_texts") or [o.get("search_text", "")]
@@ -101,7 +105,7 @@ def _workday_list(c):
                     jobs[p["externalPath"]] = Job(p["externalPath"], p.get("title", ""), p.get("locationsText", ""),
                                                   f"https://{host}/{c['site']}{p['externalPath']}", p)
             offset += 20
-            if not posts or offset >= total:
+            if not posts or offset >= total or len(jobs) >= _cap(c):
                 break
     return list(jobs.values())
 
@@ -148,7 +152,7 @@ def _ukg_list(c):
                 jobs[o["Id"]] = Job(o["Id"], o["Title"], _ukg_location(o),
                                     f"{base}/OpportunityDetail?opportunityId={o['Id']}", o)
             skip += 50
-            if not ops or skip >= data.get("totalCount", 0):
+            if not ops or skip >= data.get("totalCount", 0) or len(jobs) >= _cap(c):
                 break
     return list(jobs.values())
 
@@ -203,7 +207,7 @@ def _oracle_list(c):
                 jobs[str(r["Id"])] = Job(str(r["Id"]), r["Title"], "; ".join(p for p in places if p),
                                          f"https://{host}/hcmUI/CandidateExperience/en/sites/{site}/job/{r['Id']}", r)
             offset += 25
-            if not reqs or offset >= (item.get("TotalJobsCount") or 0):
+            if not reqs or offset >= (item.get("TotalJobsCount") or 0) or len(jobs) >= _cap(c):
                 break
     return list(jobs.values())
 
@@ -226,7 +230,7 @@ def _smartrecruiters_list(c):
         jobs += [Job(p["id"], p["name"], (p.get("location") or {}).get("fullLocation", ""),
                      f"https://jobs.smartrecruiters.com/{c['board']}/{p['id']}", p) for p in posts]
         offset += 100
-        if not posts or offset >= data.get("totalFound", 0):
+        if not posts or offset >= data.get("totalFound", 0) or len(jobs) >= _cap(c):
             return jobs
 
 
@@ -244,8 +248,9 @@ DETAIL = {"greenhouse": _greenhouse_detail, "lever": _lever_detail, "ashby": _as
           "smartrecruiters": _smartrecruiters_detail}
 
 
-def fetch_list(company):
-    return LIST[company["platform"]](company)
+def fetch_list(company, newest=None):
+    # newest: stop paging after this many, boards list newest first
+    return LIST[company["platform"]]({**company, "newest": newest})
 
 
 def fetch_detail(company, job):

@@ -66,6 +66,20 @@ def test_workday_search_terms_merge(monkeypatch):
     assert sorted(j.id for j in fetchers.fetch_list(c)) == ["/job/1", "/job/2", "/job/3"]
 
 
+def test_workday_newest_cap(monkeypatch):
+    calls = []
+
+    def page(kw):
+        off = kw["json"]["offset"]
+        return Resp({"total": 100, "jobPostings": [{"externalPath": f"/job/{i}"} for i in range(off, off + 20)]})
+
+    monkeypatch.setattr(fetchers, "http", fake_http({"/jobs": page}, calls))
+    c = {"platform": "workday", "board": "acme.wd5.myworkdayjobs.com/acme", "site": "Careers"}
+    assert len(fetchers.fetch_list(c, newest=40)) == 40 and len(calls) == 2
+    calls.clear()
+    assert len(fetchers.fetch_list(c)) == 100 and len(calls) == 5
+
+
 def test_ukg(monkeypatch):
     calls = []
     op = {"Id": "abc", "Title": "Data Analyst",
