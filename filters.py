@@ -16,24 +16,40 @@ def title_ok(title, f):
     return not _matches(f["title_exclude"], title) and bool(_matches(f["title_include"], title))
 
 
-def _place_ok(place, f):
-    # "IN-Pune", "CA-Ontario-Toronto": a leading code is a country, only US- is ours
-    m = re.match(r"\s*([A-Z]{2})-\S", place)
-    if m:
-        return m.group(1) == "US"
+def _us_marked(place, f):
     allowed = f["locations_allowed"]
     # two-letter state codes only count in capitals
     codes = [t for t in allowed if len(t) == 2 and t.isupper()]
     names = [t for t in allowed if t not in codes]
     # "(DE)" style country codes are not states
-    if _matches(names, place) or _matches(codes, re.sub(r"\([A-Z]{2}\)", "", place), 0):
-        return True
-    return not _matches(f["locations_blocked"], place)
+    return bool(_matches(names, place) or _matches(codes, re.sub(r"\([A-Z]{2}\)", "", place), 0))
+
+
+def _place_ok(place, f):
+    # "IN-Pune", "CA-Ontario-Toronto": a leading code is a country, only US- is ours
+    m = re.match(r"\s*([A-Z]{2})-\S", place)
+    if m:
+        return m.group(1) == "US"
+    return _us_marked(place, f) or not _matches(f["locations_blocked"], place)
+
+
+def _places(location):
+    return [p for p in re.split(r"[;|]", location) if p.strip()]
 
 
 def location_ok(location, f):
-    places = [p for p in re.split(r"[;|]", location) if p.strip()]
+    places = _places(location)
     return not places or any(_place_ok(p, f) for p in places)
+
+
+def abroad(location, text, f):
+    # a bare town like "Gratkorn" says nothing, so ask the description
+    if any(_us_marked(p, f) or re.match(r"\s*US-", p) for p in _places(location)):
+        return False
+    names = [t for t in f["locations_allowed"] if not (len(t) == 2 and t.isupper())]
+    us = _matches(names, text) or re.search(r"\bU\.?S\.?A?\b", text)
+    foreign = [t for t in f["locations_blocked"] if not t.startswith("(")]
+    return bool(_matches(foreign, text)) and not us
 
 
 def _clean(text):
@@ -48,7 +64,7 @@ CLEARANCE = re.compile(r"security clearance|secret clearance|\bts/sci\b|public t
 BOILERPLATE = re.compile(r"regard|discriminat|equal (employment )?opportunity|e-verify|\bi-9\b|protected", re.I)
 STUDENT = re.compile(r"currently enrolled|current(ly)? (a )?(student|pursuing)|pursuing an? (bachelor|master|undergrad|graduate|degree)"
                      r"|rising (junior|senior)|returning to school|enrolled in an? (accredited )?(university|college|degree)"
-                     r"|expected graduation|graduation date", re.I)
+                     r"|expected graduation|graduation date|ongoing studies|fit your studies|student position", re.I)
 
 
 def _sentences(text):

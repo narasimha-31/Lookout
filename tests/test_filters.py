@@ -1,4 +1,4 @@
-from filters import dealbreakers, html_to_text, location_ok, min_years, pay, student_only, title_ok
+from filters import abroad, dealbreakers, html_to_text, location_ok, min_years, pay, student_only, title_ok
 
 F = {
     "title_include": ["analyst", "data engineer", "sql"],
@@ -74,7 +74,17 @@ def test_dealbreakers():
         assert dealbreakers(s, F) == [], s
 
 
+def test_abroad():
+    gratkorn = "Location: Gratkorn, Austria | Part-time. More information about NXP in Austria."
+    assert abroad("Gratkorn", gratkorn, {**F, "locations_blocked": ["Austria"]})
+    assert not abroad("Austin (Oakhill, Office)", "More information about NXP in the United States.",
+                      {**F, "locations_blocked": ["Austria"]})
+    assert not abroad("Houston, TX", gratkorn, {**F, "locations_blocked": ["Austria"]})
+    assert not abroad("Remote", "Work from anywhere in the US. Teams in India too.", F)
+
+
 def test_student_only():
+    assert student_only("Internship: Software Engineer", "Ongoing studies in Computer Science.")
     assert student_only("Data Analyst Intern", "Must be currently enrolled in a degree program.")
     assert student_only("Summer Internship - Data", "Rising senior pursuing a bachelor's degree.")
     assert not student_only("Data Analyst Intern", "Bachelor's degree in a related field.")
