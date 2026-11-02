@@ -111,6 +111,19 @@ def test_failure_alert_only_once_and_recovery_clears(world, monkeypatch):
     assert world["health"][1]["last_error"] is None
 
 
+def test_short_blip_sends_no_email(world, monkeypatch):
+    from datetime import datetime, timedelta, timezone
+    monkeypatch.setattr(main.db, "companies", lambda: [company(1)])
+    world["health"][1] = {"last_success_at": (datetime.now(timezone.utc) - timedelta(minutes=10)).isoformat()}
+    world["fail"] = {1}
+    main.run()
+    assert world["sent"] == []
+    world["health"][1]["last_success_at"] = (datetime.now(timezone.utc) - timedelta(hours=2)).isoformat()
+    main.run()
+    main.run()
+    assert world["sent"] == ["Acme fetch failed"]
+
+
 def test_zero_jobs_warns_once(world, monkeypatch):
     monkeypatch.setattr(main.db, "companies", lambda: [company(1)])
     world["health"][1] = {"last_job_count": 10}

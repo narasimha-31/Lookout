@@ -25,10 +25,15 @@ def http(method, url, **kw):
             r = requests.request(method, url, headers=headers, timeout=20, **kw)
             r.raise_for_status()
             return r
-        except requests.RequestException:
+        except requests.RequestException as e:
             if attempt == 2:
                 raise
-            time.sleep(3)
+            wait = 3
+            if getattr(e.response, "status_code", None) == 429:
+                # rate limited, wait as long as the site asks, within reason
+                retry_after = e.response.headers.get("Retry-After", "")
+                wait = min(int(retry_after), 20) if retry_after.isdigit() else 15
+            time.sleep(wait)
 
 
 def _greenhouse_list(c):
@@ -66,6 +71,11 @@ def _ashby_detail(c, job):
     return job.raw.get("descriptionHtml") or ""
 
 
+def _terms(c):
+    o = c.get("overrides") or {}
+    return o.get("search_texts") or [o.get("search_text", "")]
+
+
 def _workday_base(c):
     host, tenant = c["board"].split("/", 1)
     return host, f"https://{host}/wday/cxs/{tenant}/{c['site']}"
@@ -76,7 +86,7 @@ def _workday_list(c):
     o = c.get("overrides") or {}
     jobs = {}
     # huge boards get searched on workday's side, one term at a time
-    for term in o.get("search_texts") or [o.get("search_text", "")]:
+    for term in _terms(c):
         offset, total = 0, 0
         while True:
             data = http("POST", f"{base}/jobs", json={
@@ -126,16 +136,21 @@ def _ukg_location(o):
 
 def _ukg_list(c):
     base = "https://" + c["board"].strip("/")
-    jobs, skip = [], 0
-    while True:
-        body = {**UKG_SEARCH, "opportunitySearch": {**UKG_SEARCH["opportunitySearch"], "Skip": skip}}
-        data = http("POST", f"{base}/JobBoardView/LoadSearchResults", json=body).json()
-        ops = data.get("opportunities") or []
-        jobs += [Job(o["Id"], o["Title"], _ukg_location(o), f"{base}/OpportunityDetail?opportunityId={o['Id']}", o)
-                 for o in ops]
-        skip += 50
-        if not ops or skip >= data.get("totalCount", 0):
-            return jobs
+    jobs = {}
+    for term in _terms(c):
+        skip = 0
+        while True:
+            body = {**UKG_SEARCH, "opportunitySearch": {**UKG_SEARCH["opportunitySearch"], "Skip": skip,
+                                                        "QueryString": term}}
+            data = http("POST", f"{base}/JobBoardView/LoadSearchResults", json=body).json()
+            ops = data.get("opportunities") or []
+            for o in ops:
+                jobs[o["Id"]] = Job(o["Id"], o["Title"], _ukg_location(o),
+                                    f"{base}/OpportunityDetail?opportunityId={o['Id']}", o)
+            skip += 50
+            if not ops or skip >= data.get("totalCount", 0):
+                break
+    return list(jobs.values())
 
 
 def _ukg_detail(c, job):
@@ -173,19 +188,24 @@ def _oracle_base(c):
 
 def _oracle_list(c):
     host, site, api = _oracle_base(c)
-    jobs, offset = [], 0
-    while True:
-        data = http("GET", f"{api}/recruitingCEJobRequisitions?onlyData=true&expand=requisitionList.secondaryLocations"
-                           f"&finder=findReqs;siteNumber={site},limit=25,offset={offset},sortBy=POSTING_DATES_DESC").json()
-        item = (data.get("items") or [{}])[0]
-        reqs = item.get("requisitionList") or []
-        for r in reqs:
-            places = [r.get("PrimaryLocation")] + [s.get("Name") for s in r.get("secondaryLocations") or []]
-            jobs.append(Job(str(r["Id"]), r["Title"], "; ".join(p for p in places if p),
-                            f"https://{host}/hcmUI/CandidateExperience/en/sites/{site}/job/{r['Id']}", r))
-        offset += 25
-        if not reqs or offset >= (item.get("TotalJobsCount") or 0):
-            return jobs
+    jobs = {}
+    for term in _terms(c):
+        keyword = f',keyword="{term}"' if term else ""
+        offset = 0
+        while True:
+            data = http("GET", f"{api}/recruitingCEJobRequisitions?onlyData=true&expand=requisitionList.secondaryLocations"
+                               f"&finder=findReqs;siteNumber={site}{keyword},limit=25,offset={offset},"
+                               f"sortBy=POSTING_DATES_DESC").json()
+            item = (data.get("items") or [{}])[0]
+            reqs = item.get("requisitionList") or []
+            for r in reqs:
+                places = [r.get("PrimaryLocation")] + [s.get("Name") for s in r.get("secondaryLocations") or []]
+                jobs[str(r["Id"])] = Job(str(r["Id"]), r["Title"], "; ".join(p for p in places if p),
+                                         f"https://{host}/hcmUI/CandidateExperience/en/sites/{site}/job/{r['Id']}", r)
+            offset += 25
+            if not reqs or offset >= (item.get("TotalJobsCount") or 0):
+                break
+    return list(jobs.values())
 
 
 def _oracle_detail(c, job):

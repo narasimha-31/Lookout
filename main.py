@@ -76,8 +76,15 @@ def _one(c, f):
         n, count = check(c, f)
     except Exception as e:
         error = f"{type(e).__name__}: {e}"[:1000]
-        if not before.get("last_error"):
-            _quietly(mail.send, mail.notice(f"{c['name']} fetch failed", error))
+        last_ok = before.get("last_success_at")
+        # short blips like rate limits are normal, only report boards down for over an hour
+        down_long = not last_ok or datetime.fromisoformat(last_ok) < datetime.now(timezone.utc) - timedelta(hours=1)
+        notified = (before.get("last_error") or "").startswith("notified: ")
+        if down_long and not notified:
+            _quietly(mail.send, mail.notice(f"{c['name']} fetch failed", f"Not working for over an hour.\n\n{error}"))
+            error = "notified: " + error
+        elif notified:
+            error = "notified: " + error
         _quietly(db.set_health, c["id"], last_error=error)
         return 0, 1
     if count == 0 and (before.get("last_job_count") or 0) > 0:
