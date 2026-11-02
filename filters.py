@@ -36,9 +36,18 @@ def _clean(text):
     return " ".join(text.replace("’", "'").replace("‑", "-").split())
 
 
+NO_SPONSOR = re.compile(r"\b(without|not|no|unable|cannot|can't|won't|never|ineligible|unavailable)\b", re.I)
+
+
 def dealbreakers(text, f):
     low = _clean(text).lower()
-    return [p for p in f["dealbreakers"] if p.lower() in low]
+    found = [p for p in f["dealbreakers"] if p.lower() in low]
+    # catches wordings like "sponsorship for this role is not being offered"
+    for sentence in [] if found else re.split(r"(?<=[.!?;])\s+|\n", text.replace("’", "'")):
+        if re.search(r"sponsor", sentence, re.I) and NO_SPONSOR.search(sentence):
+            found.append("no sponsorship: " + " ".join(sentence.split())[:120])
+            break
+    return found
 
 
 def min_years(text):

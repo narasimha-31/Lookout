@@ -42,6 +42,27 @@ def test_dealbreakers():
     assert dealbreakers("requires an active\nsecurity   clearance", F) == ["security clearance"]
 
 
+def test_sponsorship_sentences():
+    blocked = [
+        "Candidates must be eligible to work in the United States without sponsorship.",
+        "Sponsorship for this role is not being offered at this time.",
+        "We cannot sponsor visas for this position.",
+        "This role is ineligible for visa sponsorship.",
+        "Visa sponsorship is unavailable.",
+        "The company won't sponsor work visas.",
+    ]
+    for s in blocked:
+        assert dealbreakers(s, F), s
+    allowed = [
+        "Review organizations considered for company sponsorship or employee participation.",
+        "Any sponsorship considerations are subject to company policy.",
+        "We offer visa sponsorship for qualified candidates.",
+        "Must be authorized to work in the US.",
+    ]
+    for s in allowed:
+        assert dealbreakers(s, F) == [], s
+
+
 def test_min_years():
     assert min_years("2+ years of SQL experience") == 2
     assert min_years("3+ years of experience") == 3
