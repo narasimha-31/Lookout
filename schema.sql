@@ -1,7 +1,7 @@
 create table companies (
   id bigint generated always as identity primary key,
   name text not null,
-  platform text not null check (platform in ('greenhouse', 'lever', 'ashby', 'workday', 'ukg', 'workable')),
+  platform text not null,
   -- workday: host/tenant, e.g. acme.wd5.myworkdayjobs.com/acme
   -- ukg: board address, e.g. recruiting.ultipro.com/ACM1000/JobBoard/<id>
   board text not null,
