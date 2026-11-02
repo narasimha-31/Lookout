@@ -262,3 +262,16 @@ def test_sfxml(monkeypatch):
     assert j.url == "https://career8.successfactors.com/career?company=kia1&career_job_req_id=1456&career_ns=job_listing"
     assert calls[0][2]["params"]["company"] == "kia1"
     assert fetchers.fetch_detail(c, j) == "<p>Irvine, CA</p>"
+
+
+def test_bamboohr(monkeypatch):
+    calls = []
+    post = {"id": "156", "jobOpeningName": "AI Engineer", "location": {"city": "Austin", "state": "Texas"},
+            "atsLocation": {"country": "United States"}}
+    monkeypatch.setattr(fetchers, "http", fake_http({
+        "/careers/list": Resp({"result": [post]}),
+        "/careers/156/detail": Resp({"result": {"jobOpening": {"description": "<p>JD</p>"}}})}, calls))
+    c = {"platform": "bamboohr", "board": "energyx"}
+    j = fetchers.fetch_list(c)[0]
+    assert (j.id, j.location, j.url) == ("156", "Austin, Texas, United States", "https://energyx.bamboohr.com/careers/156")
+    assert fetchers.fetch_detail(c, j) == "<p>JD</p>"
