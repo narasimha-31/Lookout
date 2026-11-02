@@ -114,6 +114,8 @@ def test_min_years():
     assert years_required("a minimum of 5+ years of field sales experience and at least 2 years of experience selling") == 5
     assert years_required("3+ years of SQL experience, 2+ years of Python experience") == 3
     assert years_required("1-3 years of experience in analytics") == 1
+    assert years_required("THREE (3) or more years of experience in anti-money laundering") == 3
+    assert years_required("5 or more years of relevant experience") == 5
     assert years_required("no experience needed") is None
     assert years_required("We have been in business 10 years") is None
     assert years_required("With over 30 years of experience serving customers") is None

@@ -4,7 +4,8 @@ import re
 NUMBER_WORDS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8,
                 "nine": 9, "ten": 10}
 YEARS = re.compile(r"(?<![\d.])(\d{1,2}|" + "|".join(NUMBER_WORDS) + r")\s*\+?\s*(?:\(\d{1,2}\)\s*)?"
-                   r"(?:(?:-|–|to)\s*(?:\d{1,2}|" + "|".join(NUMBER_WORDS) + r")\s*\+?\s*)?(?:years?|yrs?)\b", re.I)
+                   r"(?:(?:-|–|to)\s*(?:\d{1,2}|" + "|".join(NUMBER_WORDS) + r")\s*\+?\s*)?"
+                   r"(?:(?:or more|or greater|plus)\s+)?(?:years?|yrs?)\b", re.I)
 PAY = re.compile(r"\$\s?\d[\d,]*(?:\.\d+)?\s*[kK]?(?:\s*(?:-|–|to)\s*\$?\s?\d[\d,]*(?:\.\d+)?\s*[kK]?)?")
 
 
@@ -97,7 +98,7 @@ def dealbreakers(text, f):
         no_clearance = re.search(r"not required|no (security )?clearance", s, re.I)
         hit = next((p for p in phrases if p in low and not (no_clearance and "clearance" in p)), None)
         # "e.g. unable to provide visas" in a note about screening is an example, not this role
-        example = not re.search(r"sponsor", s, re.I) and re.search(r"e\.?g|for example", s, re.I)
+        example = not re.search(r"sponsor", s, re.I) and re.search(r"\be\.?g\b|for example", s, re.I)
         if not hit and VISA.search(s) and NEGATIVE.search(s) and not example:
             hit = "no sponsorship"
         if not hit and CITIZEN.search(s) and REQUIRED.search(s):

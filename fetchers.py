@@ -264,10 +264,34 @@ def _consider_list(c):
         meta = {"size": 100, "sequence": seq}
 
 
+def from_apply_link(url):
+    # vc boards link to the startup's own board; read the description there when we can
+    try:
+        m = re.match(r"https?://([a-z0-9-]+)\.(wd\d+)\.myworkdayjobs\.com/(?:[a-z]{2}-[A-Z]{2}/)?([^/]+)(/job/[^?#]+)", url)
+        if m:
+            c = {"board": f"{m[1]}.{m[2]}.myworkdayjobs.com/{m[1]}", "site": m[3]}
+            return _workday_detail(c, Job(m[4], "", "", url))
+        m = re.search(r"greenhouse\.io/(?:embed/job_app\?for=)?([\w-]+)/jobs/(\d+)", url)
+        if m:
+            return _greenhouse_detail({"board": m[1]}, Job(m[2], "", "", url))
+        m = re.search(r"jobs\.lever\.co/([\w-]+)/([0-9a-f-]{36})", url)
+        if m:
+            p = http("GET", f"https://api.lever.co/v0/postings/{m[1]}/{m[2]}").json()
+            return _lever_detail({}, Job(m[2], "", "", url, p))
+        m = re.search(r"jobs\.ashbyhq\.com/([\w.-]+)/([0-9a-f-]{36})", url)
+        if m:
+            jobs = http("GET", f"https://api.ashbyhq.com/posting-api/job-board/{m[1]}").json().get("jobs") or []
+            return next((j.get("descriptionHtml") or "" for j in jobs if j.get("id") == m[2]), "")
+    except Exception:
+        pass
+    return ""
+
+
 def _consider_detail(c, job):
-    # consider has no description, only a minimum years field
+    # consider has no description; follow the apply link when it is a board we can read
     years = job.raw.get("minYearsExp")
-    return f"<p>Minimum {years} years of experience</p>" if years else ""
+    found = from_apply_link(job.url)
+    return found or (f"<p>Minimum {years} years of experience</p>" if years else "")
 
 
 def _getro_parts(c):

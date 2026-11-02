@@ -193,3 +193,13 @@ def test_rss_feed(monkeypatch):
     assert a.url == "https://careers.acme.com/job/Fort-Worth-Logistics-Analyst/1453497833/"
     assert b.location == "Toronto, ON (CA)"
     assert fetchers.fetch_detail(c, a) == "<p>2 years of experience</p>"
+
+
+def test_consider_reads_description_from_workday_apply_link(monkeypatch):
+    calls = []
+    monkeypatch.setattr(fetchers, "http", fake_http({
+        "/wday/cxs/guidehouse/External/job/": Resp({"jobPostingInfo": {"jobDescription": "<p>Public Trust</p>"}})}, calls))
+    url = "https://guidehouse.wd1.myworkdayjobs.com/External/job/US---Remote/Cyber-Analyst_45309"
+    j = Job("bain:1", "Cyber Analyst", "United States", url, {"minYearsExp": None}, "Guidehouse")
+    assert fetchers.fetch_detail({"platform": "consider"}, j) == "<p>Public Trust</p>"
+    assert calls[0][1] == "https://guidehouse.wd1.myworkdayjobs.com/wday/cxs/guidehouse/External/job/US---Remote/Cyber-Analyst_45309"
