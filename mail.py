@@ -23,6 +23,8 @@ def _message(subject, text, html_body=None):
 
 
 def job_email(company, job, jd_html, flags, first_seen):
+    # some boards send line breaks as escaped "&#xa;" text
+    jd_html = re.sub(r"&(?:amp;)?#x[aA];", "<br>", jd_html or "")
     text = html_to_text(jd_html)
     salary = pay(text)
     subject = f"New role at {company}: {job.title}, {job.location or 'location not listed'}"
