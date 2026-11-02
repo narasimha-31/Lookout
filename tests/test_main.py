@@ -66,10 +66,11 @@ def test_rejected_jobs_are_saved_not_emailed(world):
     assert not any(r["emailed"] for r in world["saved"])
 
 
-def test_three_years_still_sent(world):
-    world["jobs"] = [job(1)]
-    world["jd"] = {"1": "<p>3+ years of experience with SQL</p>"}
-    assert main.check(company(), F)[0] == 1
+def test_experience_cutoff(world):
+    world["jobs"] = [job(1), job(2), job(3)]
+    world["jd"] = {"1": "<p>3-6 years of experience</p>", "2": "<p>1-3 years of experience with SQL</p>",
+                   "3": "<p>2+ years of experience</p>"}
+    assert main.check(company(), F)[0] == 2
 
 
 def test_failed_send_is_retried_next_run(world):
