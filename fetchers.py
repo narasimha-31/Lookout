@@ -82,8 +82,9 @@ def _workday_list(c):
         posts = data.get("jobPostings") or []
         # workday only reports total on the first page
         total = data.get("total") or total
-        jobs += [Job(p["externalPath"], p["title"], p.get("locationsText", ""),
-                     f"https://{host}/{c['site']}{p['externalPath']}", p) for p in posts]
+        # workday sometimes sends blank placeholder postings
+        jobs += [Job(p["externalPath"], p.get("title", ""), p.get("locationsText", ""),
+                     f"https://{host}/{c['site']}{p['externalPath']}", p) for p in posts if p.get("externalPath")]
         offset += 20
         if not posts or offset >= total:
             return jobs

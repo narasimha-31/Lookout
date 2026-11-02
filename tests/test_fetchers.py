@@ -39,7 +39,7 @@ def test_workday_pages_and_facets(monkeypatch):
     def page(kw):
         off = kw["json"]["offset"]
         posts = [{"externalPath": f"/job/{i}", "title": "Analyst", "locationsText": "Houston, TX"}
-                 for i in range(off, min(off + 20, 25))]
+                 for i in range(off, min(off + 20, 25))] + [{"bulletFields": ["21018"]}]
         return Resp({"total": 25 if off == 0 else 0, "jobPostings": posts})
 
     monkeypatch.setattr(fetchers, "http", fake_http({"/jobs": page}, calls))
