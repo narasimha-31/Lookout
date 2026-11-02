@@ -34,7 +34,6 @@ def world(monkeypatch):
     monkeypatch.setattr(main.mail, "send", send)
     monkeypatch.setenv("GMAIL_USER", "me@example.com")
     monkeypatch.setenv("ALERT_TO", "me@example.com")
-    monkeypatch.setattr(main.time, "sleep", lambda s: None)
     return w
 
 
@@ -96,7 +95,7 @@ def test_one_failing_company_does_not_stop_others(world, monkeypatch, capsys):
     world["fail"] = {1}
     world["jobs"] = [job(1)]
     assert main.run() == (2, 1)
-    assert world["sent"] == ["Acme fetch failed", "New role at Acme: Data Analyst, Houston, TX"]
+    assert sorted(world["sent"]) == ["Acme fetch failed", "New role at Acme: Data Analyst, Houston, TX"]
     out = capsys.readouterr().out
     assert out.strip() == "checked 2 companies, 1 new jobs, 1 failed"
 

@@ -1,7 +1,7 @@
 import os
 import sys
-import time
 import traceback
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
@@ -69,29 +69,32 @@ def _quietly(fn, *args, **kw):
         pass
 
 
+def _one(c, f):
+    """Returns (emails sent, failed)."""
+    before = _health(c["id"])
+    try:
+        n, count = check(c, f)
+    except Exception as e:
+        error = f"{type(e).__name__}: {e}"[:1000]
+        if not before.get("last_error"):
+            _quietly(mail.send, mail.notice(f"{c['name']} fetch failed", error))
+        _quietly(db.set_health, c["id"], last_error=error)
+        return 0, 1
+    if count == 0 and (before.get("last_job_count") or 0) > 0:
+        _quietly(mail.send, mail.notice(f"{c['name']} returned zero jobs, check it",
+                                        "The job board returned no jobs. It may have moved to a new address."))
+    _quietly(db.set_health, c["id"], last_success_at=datetime.now(timezone.utc).isoformat(),
+             last_job_count=count, last_error=None)
+    return n, 0
+
+
 def run():
     f = db.filters()
     companies = db.companies()
-    sent = failed = 0
-    for i, c in enumerate(companies):
-        if i:
-            time.sleep(2)
-        before = _health(c["id"])
-        try:
-            n, count = check(c, f)
-        except Exception as e:
-            failed += 1
-            error = f"{type(e).__name__}: {e}"[:1000]
-            if not before.get("last_error"):
-                _quietly(mail.send, mail.notice(f"{c['name']} fetch failed", error))
-            _quietly(db.set_health, c["id"], last_error=error)
-            continue
-        sent += n
-        if count == 0 and (before.get("last_job_count") or 0) > 0:
-            _quietly(mail.send, mail.notice(f"{c['name']} returned zero jobs, check it",
-                                            "The job board returned no jobs. It may have moved to a new address."))
-        _quietly(db.set_health, c["id"], last_success_at=datetime.now(timezone.utc).isoformat(),
-                 last_job_count=count, last_error=None)
+    # companies sit on different job boards, so a few at once is still polite
+    with ThreadPoolExecutor(8) as pool:
+        results = list(pool.map(lambda c: _one(c, f), companies))
+    sent, failed = sum(r[0] for r in results), sum(r[1] for r in results)
     print(f"checked {len(companies)} companies, {sent} new jobs, {failed} failed")
     return len(companies), sent
 
