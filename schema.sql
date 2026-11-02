@@ -50,11 +50,8 @@ alter table company_health enable row level security;
 
 insert into filters values (
   1,
-  array['analyst', 'analytics', 'data engineer', 'business intelligence', 'bi developer',
-        'sql', 'python', 'it support', 'it specialist', 'systems administrator',
-        'software engineer', 'developer', 'associate engineer'],
-  array['senior', 'sr', 'lead', 'manager', 'principal', 'director', 'staff', 'head',
-        'vp', 'iii', 'iv'],
+  array['analyst', 'analytics', 'data engineer', 'analytics engineer', 'data scientist', 'data science', 'business intelligence', 'bi developer', 'bi engineer', 'power bi', 'tableau', 'sql', 'python', 'etl', 'data platform', 'data integration', 'data operations', 'data specialist', 'database', 'reporting', 'machine learning', 'ml engineer', 'ai engineer', 'applied ai', 'ai developer', 'ai specialist', 'artificial intelligence', 'llm', 'genai', 'generative ai', 'gis', 'sap', 'it support', 'it specialist', 'systems administrator', 'software engineer', 'developer', 'associate engineer'],
+  array['senior', 'sr', 'lead', 'manager', 'principal', 'director', 'staff', 'head', 'vp', 'iii', 'iv', 'architect', 'president', 'chief'],
   array['unable to sponsor', 'not able to sponsor', 'will not sponsor', 'does not sponsor',
         'no sponsorship', 'without current or future sponsorship',
         'sponsorship is not available', 'must not require sponsorship',
