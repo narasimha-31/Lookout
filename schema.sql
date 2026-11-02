@@ -1,8 +1,9 @@
 create table companies (
   id bigint generated always as identity primary key,
   name text not null,
-  platform text not null check (platform in ('greenhouse', 'lever', 'ashby', 'workday')),
+  platform text not null check (platform in ('greenhouse', 'lever', 'ashby', 'workday', 'ukg', 'workable')),
   -- workday: host/tenant, e.g. acme.wd5.myworkdayjobs.com/acme
+  -- ukg: board address, e.g. recruiting.ultipro.com/ACM1000/JobBoard/<id>
   board text not null,
   site text,
   overrides jsonb not null default '{}',
@@ -62,7 +63,7 @@ insert into filters values (
         'security clearance', 'active clearance', 'us citizenship required',
         'must be a us citizen'],
   -- two-letter codes are matched case-sensitively
-  array['United States', 'USA', 'US', 'Remote', 'Multiple',
+  array['United States', 'USA', 'US',
         'Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut',
         'Delaware', 'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa',
         'Kansas', 'Kentucky', 'Louisiana', 'Maine', 'Maryland', 'Massachusetts', 'Michigan',
@@ -75,6 +76,14 @@ insert into filters values (
         'IA', 'KS', 'KY', 'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV',
         'NH', 'NJ', 'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'SD', 'TN',
         'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY', 'DC'],
-  array['Canada', 'India', 'United Kingdom', 'UK', 'Mexico', 'Germany', 'Ireland',
-        'Philippines', 'Brazil', 'Poland', 'Australia', 'Singapore']
+  array['Canada', 'Alberta', 'Ontario', 'British Columbia', 'Quebec', 'India', 'United Kingdom', 'UK',
+        'England', 'Scotland', 'Wales', 'Mexico', 'Germany', 'Ireland', 'Philippines', 'Brazil', 'Poland',
+        'Australia', 'Singapore', 'Europe', 'Spain', 'France', 'Italy', 'Netherlands', 'Belgium', 'Norway',
+        'Sweden', 'Denmark', 'Greece', 'Turkey', 'Romania', 'Bulgaria', 'Hungary', 'Portugal', 'Switzerland',
+        'Austria', 'Ukraine', 'United Arab Emirates', 'UAE', 'Saudi Arabia', 'Qatar', 'Kuwait', 'Oman',
+        'Egypt', 'Nigeria', 'Angola', 'Tanzania', 'South Africa', 'China', 'Japan', 'Korea', 'Vietnam',
+        'Thailand', 'Malaysia', 'Indonesia', 'New Zealand', 'Jamaica', 'Trinidad', 'Guyana', 'Colombia',
+        'Argentina', 'Chile', 'Peru', 'Costa Rica', 'Israel', 'Pakistan',
+        'GBR', 'BGR', 'IND', 'CAN', 'MEX', '(GB)', '(UK)', '(ES)', '(FR)', '(IT)', '(DE)', '(NL)', '(IE)',
+        '(CN)', '(JP)', '(NZ)', '(AU)']
 );
