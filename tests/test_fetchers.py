@@ -185,13 +185,19 @@ def test_rss_feed(monkeypatch):
             "<link>https://careers.acme.com/job/Fort-Worth-Logistics-Analyst/1453497833/?feedId=null&amp;utm=x</link>"
             "<description><![CDATA[<p>2 years of experience</p>]]></description></item>"
             "<item><title><![CDATA[Buyer (Toronto, ON, CA)]]></title><link>https://careers.acme.com/job/x/77/</link>"
+            "<description>d</description></item>"
+            "<item><title>Data Analyst (Bangalore, KA, IN, 560066)</title><link>https://careers.acme.com/job/y/78/</link>"
+            "<description>d</description></item>"
+            "<item><title>Data Analyst (Houston, TX, US, 77002)</title><link>https://careers.acme.com/job/z/79/</link>"
             "<description>d</description></item></rss>")
     monkeypatch.setattr(fetchers, "http", fake_http({"services/rss": Resp(text=feed)}, calls))
     c = {"platform": "rss", "board": "careers.acme.com"}
-    a, b = fetchers.fetch_list(c)
+    a, b, india, houston = fetchers.fetch_list(c)
     assert (a.id, a.title, a.location) == ("1453497833", "Logistics Analyst", "Fort Worth, TX")
     assert a.url == "https://careers.acme.com/job/Fort-Worth-Logistics-Analyst/1453497833/"
     assert b.location == "Toronto, ON (CA)"
+    assert india.location == "Bangalore, KA (IN)"
+    assert houston.location == "Houston, TX"
     assert fetchers.fetch_detail(c, a) == "<p>2 years of experience</p>"
 
 
@@ -214,3 +220,15 @@ def test_vc_boards_skip_linkedin_copies(monkeypatch):
               "organization": {"name": "X"}, "searchable_locations": us}]
     monkeypatch.setattr(fetchers, "http", fake_http({"search/jobs": Resp({"results": {"jobs": posts, "count": 2}})}, calls))
     assert [j.id for j in fetchers.fetch_list({"platform": "getro", "board": "jobs.accel.com/8672"})] == ["2"]
+
+
+def test_amazon(monkeypatch):
+    calls = []
+    post = {"id": "x1", "id_icims": "10594811", "title": "Data Analyst", "normalized_location": "Austin, Texas, USA",
+            "job_path": "/en/jobs/10594811/data-analyst", "description": "<p>A</p>", "basic_qualifications": "2+ years"}
+    monkeypatch.setattr(fetchers, "http", fake_http({"search.json": Resp({"jobs": [post], "hits": 1})}, calls))
+    c = {"platform": "amazon", "board": "amazon.jobs"}
+    j = fetchers.fetch_list(c)[0]
+    assert (j.id, j.url) == ("10594811", "https://www.amazon.jobs/en/jobs/10594811/data-analyst")
+    assert "2+ years" in fetchers.fetch_detail(c, j)
+    assert calls[0][2]["params"]["country"] == "USA"

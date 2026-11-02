@@ -345,8 +345,8 @@ def _rss_list(c):
         link, heading = html.unescape(get("link")).split("?")[0], html.unescape(get("title"))
         m = re.match(r"(.*?)\s*\(([^()]*)\)\s*$", heading)
         title, where = (m.group(1), m.group(2)) if m else (heading, "")
-        # "Toronto, ON, CA" ends in a country code, and CA here is Canada
-        where = re.sub(r",\s*([A-Z]{2})$", lambda x: "" if x.group(1) == "US" else f" ({x.group(1)})", where)
+        # "Toronto, ON, CA" ends in a country code, and CA here is Canada; some add a zip after it
+        where = re.sub(r",\s*([A-Z]{2})(,\s*\d[\w -]*)?$", lambda x: "" if x.group(1) == "US" else f" ({x.group(1)})", where)
         jid = (re.search(r"/(\d+)/?$", link) or [None, link])[1]
         jobs.append(Job(jid, title, where, link, {"description": get("description")}))
     return jobs
@@ -400,14 +400,32 @@ def _eightfold_detail(c, job):
     return (data.get("data") or {}).get("jobDescription") or ""
 
 
+def _amazon_list(c):
+    jobs, offset = [], 0
+    while True:
+        data = http("GET", "https://www.amazon.jobs/en/search.json", params={
+            "country": "USA", "result_limit": 100, "offset": offset, "sort": "recent"}).json()
+        posts = data.get("jobs") or []
+        jobs += [Job(str(p.get("id_icims") or p["id"]), p["title"], p.get("normalized_location") or p.get("location") or "",
+                     "https://www.amazon.jobs" + p["job_path"], p) for p in posts]
+        offset += len(posts)
+        if not posts or len(jobs) >= min(_cap(c), data.get("hits", 0)):
+            return jobs
+
+
+def _amazon_detail(c, job):
+    return "".join(f"<p>{job.raw.get(k) or ''}</p>" for k in ("description", "basic_qualifications", "preferred_qualifications"))
+
+
 LIST = {"greenhouse": _greenhouse_list, "lever": _lever_list, "ashby": _ashby_list, "workday": _workday_list,
         "ukg": _ukg_list, "workable": _workable_list, "oracle": _oracle_list, "smartrecruiters": _smartrecruiters_list,
         "consider": _consider_list, "getro": _getro_list, "jibe": _jibe_list, "eightfold": _eightfold_list,
-        "rss": _rss_list}
+        "rss": _rss_list, "amazon": _amazon_list}
 DETAIL = {"greenhouse": _greenhouse_detail, "lever": _lever_detail, "ashby": _ashby_detail, "workday": _workday_detail,
           "ukg": _ukg_detail, "workable": _workable_detail, "oracle": _oracle_detail,
           "smartrecruiters": _smartrecruiters_detail, "consider": _consider_detail, "getro": _getro_detail,
-          "jibe": _jibe_detail, "eightfold": _eightfold_detail, "rss": _rss_detail}
+          "jibe": _jibe_detail, "eightfold": _eightfold_detail, "rss": _rss_detail,
+          "amazon": _amazon_detail}
 
 
 def fetch_list(company, newest=None):
