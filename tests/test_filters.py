@@ -62,6 +62,9 @@ def test_dealbreakers():
         "Open to green card holders only.",
         "Must be a U.S. person as defined by ITAR.",
         "Requires an active Secret clearance.",
+        "This position is open only to individuals who would not require visa support including H-1B or CPT/OPT/STEM, etc., now or in the future.",
+        "We are unable to support OPT or H1B candidates for this role.",
+        "Applicants requiring a work permit will not be considered.",
         "Ability to obtain a security clearance.",
     ]
     for s in blocked:
@@ -75,6 +78,10 @@ def test_dealbreakers():
         "We participate in E-Verify and must confirm the identity of U.S. citizens and noncitizens.",
         "No security clearance required.",
         "Coordinate customs clearance for imports.",
+        "We do not discriminate on the basis of immigration status.",
+        "Visa sponsorship is available for this role.",
+        "Candidates who need H-1B transfer are welcome to apply.",
+        "Where roles have hard requirements (eg days in office, unable to provide visas, etc), tell us.",
     ]
     for s in allowed:
         assert dealbreakers(s, F) == [], s
