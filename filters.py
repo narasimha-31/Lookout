@@ -73,7 +73,7 @@ def _clean(text):
 
 
 NEGATIVE = re.compile(r"\b(without|not|no|unable|cannot|can't|won't|never|ineligible|unavailable)\b", re.I)
-VISA = re.compile(r"sponsor|\bvisas?\b|\bh-?1-?b\b|\bopt\b|\bcpt\b|stem opt|immigration|work permit", re.I)
+VISA = re.compile(r"sponsor|\bvisas?\b|\bh-?1-?b\b|\bopt\b(?![- ]?(out|in)\b)|\bcpt\b|stem opt|immigration|work permit", re.I)
 CITIZEN = re.compile(r"citizen|green ?card|permanent resident|\bu\.?s\.? persons?\b|\bitar\b", re.I)
 REQUIRED = re.compile(r"\b(must|required?|requires|requirement|only|need|needs|eligible|obtain)\b", re.I)
 CLEARANCE = re.compile(r"security clearance|secret clearance|\bts/sci\b|public trust", re.I)

@@ -81,6 +81,7 @@ def test_dealbreakers():
         "We do not discriminate on the basis of immigration status.",
         "Visa sponsorship is available for this role.",
         "Candidates who need H-1B transfer are welcome to apply.",
+        "If you prefer that your profile not be used in this process, you can opt out at any time.",
         "Where roles have hard requirements (eg days in office, unable to provide visas, etc), tell us.",
     ]
     for s in allowed:
