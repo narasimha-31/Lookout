@@ -64,6 +64,9 @@ def abroad(location, text, f):
         return False
     names = [t for t in f["locations_allowed"] if not (len(t) == 2 and t.isupper())]
     us = _matches(names, text) or re.search(r"\bU\.?S\.?A?\b", text)
+    # no location at all, so the description has to place it in the US
+    if not location.strip():
+        return not (us or _us_marked(text, f))
     foreign = [t for t in f["locations_blocked"] if not t.startswith("(")]
     return bool(_matches(foreign, text)) and not us
 

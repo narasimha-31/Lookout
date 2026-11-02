@@ -95,6 +95,9 @@ def test_abroad():
                       {**F, "locations_blocked": ["Austria"]})
     assert not abroad("Houston, TX", gratkorn, {**F, "locations_blocked": ["Austria"]})
     assert not abroad("Remote", "Work from anywhere in the US. Teams in India too.", F)
+    assert abroad("", "Join our well services team in Aberdeen.", F)
+    assert not abroad("", "Based at our office in Houston, TX.", F)
+    assert not abroad("", "This role sits in Texas.", F)
 
 
 def test_student_only():
