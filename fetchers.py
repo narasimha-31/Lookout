@@ -468,15 +468,47 @@ def _bamboohr_detail(c, job):
     return ((data.get("result") or {}).get("jobOpening") or {}).get("description") or ""
 
 
+def _sitemap_list(c):
+    # some staffing sites only publish their jobs in a sitemap; the url slug stands in for the title
+    index = http("GET", f"https://{c['board']}").text
+    maps = [u for u in re.findall(r"<sitemap>\s*<loc>(.*?)</loc>", index) if "job" in u] or [f"https://{c['board']}"]
+    urls = []
+    for m in maps:
+        page = index if m == f"https://{c['board']}" else http("GET", m).text
+        urls += re.findall(r"<url>\s*<loc>(.*?)</loc>\s*(?:<lastmod>(.*?)</lastmod>)?", page)
+    urls = sorted({u: d for u, d in urls if "/job/" in u}.items(), key=lambda x: x[1], reverse=True)
+    jobs = []
+    for url, _ in urls[:int(min(_cap(c), len(urls)))]:
+        slug = url.rstrip("/").rsplit("/", 1)[-1]
+        jobs.append(Job(url, re.sub(r"^\d+-", "", slug).replace("-", " "), "", url))
+    return jobs
+
+
+def _sitemap_detail(c, job):
+    page = http("GET", job.url).text
+    for block in re.findall(r"<script[^>]*application/ld\+json[^>]*>(.*?)</script>", page, re.S):
+        try:
+            data = json.loads(block)
+        except ValueError:
+            continue
+        for item in data.get("@graph", [data]) if isinstance(data, dict) else data:
+            if isinstance(item, dict) and item.get("@type") == "JobPosting":
+                place = ((item.get("jobLocation") or {}).get("address") or {}) if isinstance(item.get("jobLocation"), dict) else {}
+                job.title = html.unescape(html.unescape(item.get("title") or job.title))
+                job.location = ", ".join(x for x in (place.get("addressLocality"), place.get("addressRegion")) if x) or job.location
+                return html.unescape(item.get("description") or "")
+    return ""
+
+
 LIST = {"greenhouse": _greenhouse_list, "lever": _lever_list, "ashby": _ashby_list, "workday": _workday_list,
         "ukg": _ukg_list, "workable": _workable_list, "oracle": _oracle_list, "smartrecruiters": _smartrecruiters_list,
         "consider": _consider_list, "getro": _getro_list, "jibe": _jibe_list, "eightfold": _eightfold_list,
-        "rss": _rss_list, "amazon": _amazon_list, "phenom": _phenom_list, "sfxml": _sfxml_list, "bamboohr": _bamboohr_list}
+        "rss": _rss_list, "amazon": _amazon_list, "phenom": _phenom_list, "sfxml": _sfxml_list, "bamboohr": _bamboohr_list, "sitemap": _sitemap_list}
 DETAIL = {"greenhouse": _greenhouse_detail, "lever": _lever_detail, "ashby": _ashby_detail, "workday": _workday_detail,
           "ukg": _ukg_detail, "workable": _workable_detail, "oracle": _oracle_detail,
           "smartrecruiters": _smartrecruiters_detail, "consider": _consider_detail, "getro": _getro_detail,
           "jibe": _jibe_detail, "eightfold": _eightfold_detail, "rss": _rss_detail,
-          "amazon": _amazon_detail, "phenom": _phenom_detail, "sfxml": _rss_detail, "bamboohr": _bamboohr_detail}
+          "amazon": _amazon_detail, "phenom": _phenom_detail, "sfxml": _rss_detail, "bamboohr": _bamboohr_detail, "sitemap": _sitemap_detail}
 
 
 def fetch_list(company, newest=None):

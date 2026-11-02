@@ -275,3 +275,23 @@ def test_bamboohr(monkeypatch):
     j = fetchers.fetch_list(c)[0]
     assert (j.id, j.location, j.url) == ("156", "Austin, Texas, United States", "https://energyx.bamboohr.com/careers/156")
     assert fetchers.fetch_detail(c, j) == "<p>JD</p>"
+
+
+def test_sitemap(monkeypatch):
+    calls = []
+    index = "<sitemapindex><sitemap><loc>https://x.com/page-sitemap.xml</loc></sitemap><sitemap><loc>https://x.com/job_listing-sitemap.xml</loc></sitemap></sitemapindex>"
+    urls = ("<urlset><url><loc>https://x.com/job/1-old-data-analyst-austin-tx/</loc><lastmod>2026-10-01</lastmod></url>"
+            "<url><loc>https://x.com/job/2-data-analyst-austin-tx/</loc><lastmod>2026-11-01</lastmod></url>"
+            "<url><loc>https://x.com/about/</loc></url></urlset>")
+    ld = {"@type": "JobPosting", "title": "Data Analyst", "description": "&lt;p&gt;2 years&lt;/p&gt;",
+          "jobLocation": {"address": {"addressLocality": "Austin", "addressRegion": "Texas"}}}
+    page = '<script type="application/ld+json">%s</script>' % json.dumps(ld)
+    monkeypatch.setattr(fetchers, "http", fake_http({"sitemap_index": Resp(text=index), "job_listing-sitemap": Resp(text=urls),
+                                                     "/job/2-": Resp(text=page)}, calls))
+    c = {"platform": "sitemap", "board": "x.com/sitemap_index.xml"}
+    jobs = fetchers.fetch_list(c)
+    assert [j.title for j in jobs] == ["data analyst austin tx", "old data analyst austin tx"]
+    assert len(fetchers.fetch_list(c, 1)) == 1
+    j = jobs[0]
+    assert fetchers.fetch_detail(c, j) == "<p>2 years</p>"
+    assert (j.title, j.location) == ("Data Analyst", "Austin, Texas")
