@@ -94,11 +94,11 @@ def failing():
     return [f"{r['companies']['name']}: {r['last_error'][:150]}" for r in rows]
 
 
-def health(company_id):
-    rows = http("GET", _url("company_health"), headers=_headers(), params={"company_id": f"eq.{company_id}"}).json()
-    return rows[0] if rows else None
+def all_health():
+    return {r["company_id"]: r for r in http("GET", _url("company_health"), headers=_headers()).json()}
 
 
-def set_health(company_id, **fields):
-    http("POST", _url("company_health"), headers=_headers("resolution=merge-duplicates,return=minimal"),
-         json={"company_id": company_id, **fields})
+def save_health(rows):
+    # one request for every company keeps supabase's request logs small
+    if rows:
+        http("POST", _url("company_health"), headers=_headers("resolution=merge-duplicates,return=minimal"), json=rows)

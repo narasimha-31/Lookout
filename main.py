@@ -1,3 +1,4 @@
+import hashlib
 import os
 import sys
 import traceback
@@ -30,17 +31,21 @@ def _row(company, job, emailed=False, repost=False):
             "location": job.location, "url": job.url, "emailed": emailed, "possible_repost": repost}
 
 
-def check(company, f):
-    """Returns (emails sent, jobs listed)."""
+def check(company, f, before=None):
+    """Returns (emails sent, jobs listed, fingerprint of the job list)."""
     f = {**f, **{k: v for k, v in (company.get("overrides") or {}).items() if k in f}}
     # after the first check only the newest jobs matter
     newest = NEWEST if company["first_run_done"] else FIRST_CHECK
     jobs = list({j.id: j for j in fetchers.fetch_list(company, newest)}.values())
+    fingerprint = hashlib.sha1("\n".join(sorted(j.id for j in jobs)).encode()).hexdigest()[:16]
 
     if not company["first_run_done"]:
         db.save_jobs([_row(company, j) for j in jobs])
         db.mark_first_run(company["id"])
-        return 0, len(jobs)
+        return 0, len(jobs), fingerprint
+    # same list as last time means nothing new, no need to ask the database
+    if fingerprint == (before or {}).get("ids_hash"):
+        return 0, len(jobs), fingerprint
 
     seen = db.seen_ids(company["id"], [j.id for j in jobs])
     new = [j for j in jobs if j.id not in seen]
@@ -69,7 +74,7 @@ def check(company, f):
         mail.send(mail.job_email(name, job, jd, flags, first_seen))
         db.save_jobs([_row(company, job, emailed=True, repost=repost)])
         sent += 1
-    return sent, len(jobs)
+    return sent, len(jobs), fingerprint
 
 
 def _quietly(fn, *args, **kw):
@@ -79,11 +84,13 @@ def _quietly(fn, *args, **kw):
         pass
 
 
-def _one(c, f):
-    """Returns (emails sent, failed)."""
-    before = _health(c["id"])
+def _one(c, f, before):
+    """Returns (emails sent, failed, health row)."""
+    row = {"company_id": c["id"], "last_success_at": before.get("last_success_at"),
+           "last_job_count": before.get("last_job_count"), "last_error": before.get("last_error"),
+           "ids_hash": before.get("ids_hash")}
     try:
-        n, count = check(c, f)
+        n, count, fingerprint = check(c, f, before)
     except Exception as e:
         error = f"{type(e).__name__}: {e}"[:1000]
         last_ok = before.get("last_success_at")
@@ -95,22 +102,22 @@ def _one(c, f):
             error = "notified: " + error
         elif notified:
             error = "notified: " + error
-        _quietly(db.set_health, c["id"], last_error=error)
-        return 0, 1
+        return 0, 1, {**row, "last_error": error}
     if count == 0 and (before.get("last_job_count") or 0) > 0:
         _quietly(mail.send, mail.notice(f"{c['name']} returned zero jobs, check it",
                                         "The job board returned no jobs. It may have moved to a new address."))
-    _quietly(db.set_health, c["id"], last_success_at=datetime.now(timezone.utc).isoformat(),
-             last_job_count=count, last_error=None)
-    return n, 0
+    return n, 0, {**row, "last_success_at": datetime.now(timezone.utc).isoformat(), "last_job_count": count,
+                  "last_error": None, "ids_hash": fingerprint}
 
 
 def run():
     f = db.filters()
     companies = db.companies()
+    health = db.all_health()
     # companies sit on different job boards, so a few at once is still polite
     with ThreadPoolExecutor(8) as pool:
-        results = list(pool.map(lambda c: _one(c, f), companies))
+        results = list(pool.map(lambda c: _one(c, f, health.get(c["id"]) or {}), companies))
+    _quietly(db.save_health, [r[2] for r in results])
     sent, failed = sum(r[0] for r in results), sum(r[1] for r in results)
     print(f"checked {len(companies)} companies, {sent} new jobs, {failed} failed")
     return len(companies), sent
@@ -127,13 +134,6 @@ def heartbeat():
     mail.send(mail.notice(f"Lookout daily: {emailed} sent, {len(bad)} failing", body))
     f = db.filters()
     db.prune(lambda title: flt.title_ok(title, f))
-
-
-def _health(company_id):
-    try:
-        return db.health(company_id) or {}
-    except Exception:
-        return {}
 
 
 if __name__ == "__main__":

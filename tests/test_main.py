@@ -28,8 +28,8 @@ def world(monkeypatch):
     monkeypatch.setattr(main.db, "mark_first_run", lambda cid: w["marked"].append(cid))
     monkeypatch.setattr(main.db, "is_repost", lambda cid, t, loc: any(
         r["title"] == t and r["location"] == loc for r in w["saved"]))
-    monkeypatch.setattr(main.db, "health", lambda cid: w["health"].get(cid))
-    monkeypatch.setattr(main.db, "set_health", lambda cid, **kw: w["health"].setdefault(cid, {}).update(kw))
+    monkeypatch.setattr(main.db, "all_health", lambda: {k: dict(v) for k, v in w["health"].items()})
+    monkeypatch.setattr(main.db, "save_health", lambda rows: [w["health"].__setitem__(r["company_id"], r) for r in rows])
     monkeypatch.setattr(main.db, "filters", lambda: F)
     monkeypatch.setattr(main.mail, "send", send)
     monkeypatch.setenv("GMAIL_USER", "me@example.com")
@@ -47,7 +47,7 @@ def job(i, title="Data Analyst", loc="Houston, TX"):
 
 def test_first_run_saves_all_and_sends_nothing(world):
     world["jobs"] = [job(1), job(2, "Welder")]
-    assert main.check(company(first_run_done=False), F) == (0, 2)
+    assert main.check(company(first_run_done=False), F)[:2] == (0, 2)
     assert len(world["saved"]) == 2 and world["sent"] == [] and world["marked"] == [1]
 
 
@@ -61,7 +61,7 @@ def test_new_matching_job_is_emailed_once(world):
 def test_rejected_jobs_are_saved_not_emailed(world):
     world["jobs"] = [job(1), job(2), job(3, "Welder"), job(4, loc="Pune, India")]
     world["jd"] = {"1": "<p>4+ years of experience</p>", "2": "<p>No sponsorship available</p>"}
-    assert main.check(company(), F) == (0, 4)
+    assert main.check(company(), F)[:2] == (0, 4)
     assert {r["external_job_id"] for r in world["saved"]} == {"1", "2", "3", "4"}
     assert not any(r["emailed"] for r in world["saved"])
 
@@ -149,3 +149,16 @@ def test_portfolio_email_names_startup(world):
     c = {**company(), "name": "Accel portfolio"}
     assert main.check(c, F)[0] == 1
     assert world["sent"] == ["New role at Startup Co (via Accel portfolio): Data Analyst, Austin, TX"]
+
+
+def test_unchanged_board_skips_database(world, monkeypatch):
+    monkeypatch.setattr(main.db, "companies", lambda: [company(1)])
+    world["jobs"] = [job(1)]
+    main.run()
+    lookups = []
+    monkeypatch.setattr(main.db, "seen_ids", lambda cid, ids: lookups.append(cid) or set())
+    main.run()
+    assert lookups == [] and world["sent"] == ["New role at Acme: Data Analyst, Houston, TX"]
+    world["jobs"] = [job(1), job(2, "BI Analyst")]
+    main.run()
+    assert lookups == [1]

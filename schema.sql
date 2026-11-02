@@ -40,7 +40,8 @@ create table company_health (
   company_id bigint primary key references companies on delete cascade,
   last_success_at timestamptz,
   last_job_count int,
-  last_error text
+  last_error text,
+  ids_hash text
 );
 
 alter table companies enable row level security;
