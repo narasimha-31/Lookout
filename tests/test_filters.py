@@ -33,6 +33,12 @@ def test_locations():
     assert not location_ok("Munich (DE)", F)
     assert not location_ok("Toronto (CA)", F)
     assert location_ok("San Diego, CA", F)
+    assert not location_ok("IN-Pune", F)
+    assert not location_ok("CA-Ontario-Toronto", F)
+    assert not location_ok("IL-Israel-Remote", F)
+    assert location_ok("US-CA-Menlo Park", F)
+    assert location_ok("US-TX-Remote", F)
+    assert location_ok("TX - San Angelo", F)
     assert location_ok("Austin, tx area", F) is True  # names match any case, unclear passes
 
 

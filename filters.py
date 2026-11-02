@@ -17,6 +17,10 @@ def title_ok(title, f):
 
 
 def _place_ok(place, f):
+    # "IN-Pune", "CA-Ontario-Toronto": a leading code is a country, only US- is ours
+    m = re.match(r"\s*([A-Z]{2})-\S", place)
+    if m:
+        return m.group(1) == "US"
     allowed = f["locations_allowed"]
     # two-letter state codes only count in capitals
     codes = [t for t in allowed if len(t) == 2 and t.isupper()]
