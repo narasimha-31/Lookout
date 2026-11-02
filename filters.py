@@ -95,19 +95,23 @@ def student_only(title, text):
     return bool(re.search(r"\bintern(ship)?\b|co-op", title, re.I) and STUDENT.search(text))
 
 
-def min_years(text):
+def years_required(text):
     text = _clean(text)
     found = []
     for m in YEARS.finditer(text):
         # only count years near the word experience
         if "experience" not in text[max(0, m.start() - 100):m.end() + 100].lower():
             continue
+        # "5 years preferred" is a wish, not a bar
+        if re.search(r"prefer|nice to have|a plus|bonus", text[m.end():m.end() + 60], re.I):
+            continue
         first = m.group(1).lower()
         n = NUMBER_WORDS.get(first) or int(first)
         # bigger numbers are company history, like "over 30 years of experience"
         if n <= 15:
             found.append(n)
-    return min(found) if found else None
+    # ranges count by their low end, but the strictest requirement is the real bar
+    return max(found) if found else None
 
 
 def pay(text):

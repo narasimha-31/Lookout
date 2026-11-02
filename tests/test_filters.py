@@ -1,4 +1,4 @@
-from filters import abroad, dealbreakers, html_to_text, location_ok, min_years, pay, student_only, title_ok
+from filters import abroad, dealbreakers, html_to_text, location_ok, years_required, pay, student_only, title_ok
 
 F = {
     "title_include": ["analyst", "data engineer", "sql"],
@@ -92,16 +92,19 @@ def test_student_only():
 
 
 def test_min_years():
-    assert min_years("2+ years of SQL experience") == 2
-    assert min_years("3+ years of experience") == 3
-    assert min_years("4+ years experience required") == 4
-    assert min_years("2-4 years of relevant experience") == 2
-    assert min_years("Experience: 5 years preferred, 1 year required") == 1
-    assert min_years("three (3) years of experience") == 3
-    assert min_years("no experience needed") is None
-    assert min_years("We have been in business 10 years") is None
-    assert min_years("With over 30 years of experience serving customers") is None
-    assert min_years("Offer includes 401(k) and 2 weeks PTO") is None
+    assert years_required("2+ years of SQL experience") == 2
+    assert years_required("3+ years of experience") == 3
+    assert years_required("4+ years experience required") == 4
+    assert years_required("2-4 years of relevant experience") == 2
+    assert years_required("Experience: 5 years preferred, 1 year required") == 1
+    assert years_required("three (3) years of experience") == 3
+    assert years_required("a minimum of 5+ years of field sales experience and at least 2 years of experience selling") == 5
+    assert years_required("3+ years of SQL experience, 2+ years of Python experience") == 3
+    assert years_required("1-3 years of experience in analytics") == 1
+    assert years_required("no experience needed") is None
+    assert years_required("We have been in business 10 years") is None
+    assert years_required("With over 30 years of experience serving customers") is None
+    assert years_required("Offer includes 401(k) and 2 weeks PTO") is None
 
 
 def test_pay():
