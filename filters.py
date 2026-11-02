@@ -30,6 +30,10 @@ def _place_ok(place, f):
     m = re.match(r"\s*([A-Z]{2})-\S", place)
     if m:
         return m.group(1) == "US"
+    # "Kulim, 02 (MY)", "London (GB)": a bracketed code is a country too
+    m = re.search(r"\(([A-Z]{2})\)", place)
+    if m:
+        return m.group(1) == "US"
     return _us_marked(place, f) or not _matches(f["locations_blocked"], place)
 
 

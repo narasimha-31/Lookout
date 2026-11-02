@@ -270,10 +270,17 @@ def _consider_detail(c, job):
     return f"<p>Minimum {years} years of experience</p>" if years else ""
 
 
+def _getro_parts(c):
+    # board is "jobs.accel.com/8672": the vc's board host and getro's collection id
+    host, _, coll = c["board"].rpartition("/")
+    return host, coll
+
+
 def _getro_list(c):
+    _, coll = _getro_parts(c)
     jobs, page = [], 0
     while True:
-        data = http("POST", f"https://api.getro.com/api/v2/collections/{c['board']}/search/jobs",
+        data = http("POST", f"https://api.getro.com/api/v2/collections/{coll}/search/jobs",
                     json={"hitsPerPage": 100, "page": page, "filters": "", "query": ""}).json()
         res = data.get("results") or {}
         posts = res.get("jobs") or []
@@ -286,15 +293,91 @@ def _getro_list(c):
 
 
 def _getro_detail(c, job):
-    return ""
+    host, _ = _getro_parts(c)
+    org = (job.raw.get("organization") or {}).get("slug")
+    if not host or not org:
+        return ""
+    page = http("GET", f"https://{host}/companies/{org}/jobs/{job.raw.get('slug')}", headers={"Accept": "text/html"}).text
+    m = re.search(r'<script id="__NEXT_DATA__" type="application/json">(.*?)</script>', page, re.S)
+    if not m:
+        return ""
+    state = json.loads(m.group(1)).get("props", {}).get("pageProps", {}).get("initialState", {})
+    return ((state.get("jobs") or {}).get("currentJob") or {}).get("description") or ""
+
+
+def _rss_list(c):
+    # successfactors career sites publish their newest jobs as rss
+    feed = http("GET", f"https://{c['board']}/services/rss/job/?locale=en_US&keywords=",
+                headers={"Accept": "application/rss+xml"}).text
+    jobs = []
+    for item in re.findall(r"<item>(.*?)</item>", feed, re.S):
+        get = lambda tag: (re.search(rf"<{tag}>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?</{tag}>", item, re.S) or [None, ""])[1].strip()
+        link, heading = html.unescape(get("link")).split("?")[0], html.unescape(get("title"))
+        m = re.match(r"(.*?)\s*\(([^()]*)\)\s*$", heading)
+        title, where = (m.group(1), m.group(2)) if m else (heading, "")
+        # "Toronto, ON, CA" ends in a country code, and CA here is Canada
+        where = re.sub(r",\s*([A-Z]{2})$", lambda x: "" if x.group(1) == "US" else f" ({x.group(1)})", where)
+        jid = (re.search(r"/(\d+)/?$", link) or [None, link])[1]
+        jobs.append(Job(jid, title, where, link, {"description": get("description")}))
+    return jobs
+
+
+def _rss_detail(c, job):
+    return job.raw.get("description") or ""
+
+
+def _jibe_list(c):
+    jobs, page = [], 1
+    while True:
+        data = http("GET", f"https://{c['board']}/api/jobs?page={page}&limit=100&sortBy=posted_date"
+                           "&descending=true&internal=false").json()
+        posts = [p["data"] for p in data.get("jobs") or []]
+        jobs += [Job(str(p.get("req_id") or p["slug"]), p["title"], p.get("full_location") or "",
+                     f"https://{c['board']}/careers-home/jobs/{p['slug']}", p) for p in posts]
+        page += 1
+        if not posts or len(jobs) >= min(_cap(c), data.get("totalCount", 0)):
+            return jobs
+
+
+def _jibe_detail(c, job):
+    return job.raw.get("description") or ""
+
+
+def _eightfold_parts(c):
+    host, domain = c["board"].split("/", 1)
+    return host, domain
+
+
+def _eightfold_list(c):
+    host, domain = _eightfold_parts(c)
+    jobs, start = [], 0
+    while True:
+        data = http("GET", f"https://{host}/api/pcsx/search", params={
+            "domain": domain, "query": "", "location": "United States", "start": start, "sort_by": "timestamp"}).json()
+        d = data.get("data") or {}
+        posts = d.get("positions") or []
+        jobs += [Job(str(p["id"]), p["name"], "; ".join(p.get("locations") or []),
+                     f"https://{host}{p.get('positionUrl') or '/careers/job/' + str(p['id'])}", p) for p in posts]
+        start += len(posts)
+        if not posts or len(jobs) >= min(_cap(c), d.get("count", 0)):
+            return jobs
+
+
+def _eightfold_detail(c, job):
+    host, domain = _eightfold_parts(c)
+    data = http("GET", f"https://{host}/api/pcsx/position_details",
+                params={"position_id": job.id, "domain": domain, "hl": "en"}).json()
+    return (data.get("data") or {}).get("jobDescription") or ""
 
 
 LIST = {"greenhouse": _greenhouse_list, "lever": _lever_list, "ashby": _ashby_list, "workday": _workday_list,
         "ukg": _ukg_list, "workable": _workable_list, "oracle": _oracle_list, "smartrecruiters": _smartrecruiters_list,
-        "consider": _consider_list, "getro": _getro_list}
+        "consider": _consider_list, "getro": _getro_list, "jibe": _jibe_list, "eightfold": _eightfold_list,
+        "rss": _rss_list}
 DETAIL = {"greenhouse": _greenhouse_detail, "lever": _lever_detail, "ashby": _ashby_detail, "workday": _workday_detail,
           "ukg": _ukg_detail, "workable": _workable_detail, "oracle": _oracle_detail,
-          "smartrecruiters": _smartrecruiters_detail, "consider": _consider_detail, "getro": _getro_detail}
+          "smartrecruiters": _smartrecruiters_detail, "consider": _consider_detail, "getro": _getro_detail,
+          "jibe": _jibe_detail, "eightfold": _eightfold_detail, "rss": _rss_detail}
 
 
 def fetch_list(company, newest=None):

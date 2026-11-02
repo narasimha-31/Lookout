@@ -151,3 +151,45 @@ def test_getro_keeps_startup_name(monkeypatch):
 def test_consider_years_from_field():
     j = Job("a:1", "Data Analyst", "Austin, TX", "u", {"minYearsExp": 2}, "Startup Co")
     assert fetchers.fetch_detail({"platform": "consider"}, j) == "<p>Minimum 2 years of experience</p>"
+
+
+def test_eightfold_asks_for_us_and_pages(monkeypatch):
+    calls = []
+
+    def page(kw):
+        start = kw["params"]["start"]
+        assert kw["params"]["location"] == "United States"
+        pos = [{"id": i, "name": "Data Analyst", "locations": ["Boise, Idaho, United States of America"],
+                "positionUrl": f"/careers/job/{i}"} for i in range(start, min(start + 10, 25))]
+        return Resp({"data": {"count": 25, "positions": pos}})
+
+    monkeypatch.setattr(fetchers, "http", fake_http({"pcsx/search": page}, calls))
+    jobs = fetchers.fetch_list({"platform": "eightfold", "board": "careers.acme.com/acme.com"})
+    assert len(jobs) == 25 and jobs[0].url == "https://careers.acme.com/careers/job/0"
+
+
+def test_jibe_uses_slug_page(monkeypatch):
+    calls = []
+    post = {"data": {"req_id": "86587", "slug": "86587", "title": "Data Analyst", "full_location": "Austin, Texas",
+                     "description": "<p>Hi</p>"}}
+    monkeypatch.setattr(fetchers, "http", fake_http({"/api/jobs": Resp({"jobs": [post], "totalCount": 1})}, calls))
+    c = {"platform": "jibe", "board": "careers.acme.com"}
+    jobs = fetchers.fetch_list(c)
+    assert jobs[0].url == "https://careers.acme.com/careers-home/jobs/86587"
+    assert fetchers.fetch_detail(c, jobs[0]) == "<p>Hi</p>"
+
+
+def test_rss_feed(monkeypatch):
+    calls = []
+    feed = ("<rss><item><title><![CDATA[Logistics Analyst (Fort Worth, TX, US)]]></title>"
+            "<link>https://careers.acme.com/job/Fort-Worth-Logistics-Analyst/1453497833/?feedId=null&amp;utm=x</link>"
+            "<description><![CDATA[<p>2 years of experience</p>]]></description></item>"
+            "<item><title><![CDATA[Buyer (Toronto, ON, CA)]]></title><link>https://careers.acme.com/job/x/77/</link>"
+            "<description>d</description></item></rss>")
+    monkeypatch.setattr(fetchers, "http", fake_http({"services/rss": Resp(text=feed)}, calls))
+    c = {"platform": "rss", "board": "careers.acme.com"}
+    a, b = fetchers.fetch_list(c)
+    assert (a.id, a.title, a.location) == ("1453497833", "Logistics Analyst", "Fort Worth, TX")
+    assert a.url == "https://careers.acme.com/job/Fort-Worth-Logistics-Analyst/1453497833/"
+    assert b.location == "Toronto, ON (CA)"
+    assert fetchers.fetch_detail(c, a) == "<p>2 years of experience</p>"

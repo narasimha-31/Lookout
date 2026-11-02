@@ -39,6 +39,8 @@ def test_locations():
     assert location_ok("US-CA-Menlo Park", F)
     assert location_ok("US-TX-Remote", F)
     assert location_ok("TX - San Angelo", F)
+    assert not location_ok("Kulim, 02 (MY)", F)
+    assert location_ok("Houston (US)", F)
     tn = {**F, "locations_allowed": F["locations_allowed"] + ["Tennessee", "TN"]}
     assert not location_ok("Tennessee, USA; Bengaluru, Karnataka, India; Chennai, Tamil Nadu, India", tn)
     assert location_ok("Nashville, TN; Bengaluru, Karnataka, India", tn)
