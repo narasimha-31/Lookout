@@ -1,9 +1,13 @@
 name: lookout
+run-name: lookout (${{ inputs.source || github.event_name }})
 
 on:
   schedule:
     - cron: "*/10 * * * *"
   workflow_dispatch:
+    inputs:
+      source:
+        default: manual
 
 concurrency:
   group: lookout
