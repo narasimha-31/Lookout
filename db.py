@@ -29,13 +29,19 @@ def _quote(value):
 
 
 def seen_ids(company_id, ids):
-    seen = set()
-    # look up only these ids, postgrest caps replies at 1000 rows
-    for i in range(0, len(ids), 50):
-        chunk = ",".join(_quote(x) for x in ids[i:i + 50])
+    seen, chunks, cur = set(), [], []
+    # look up only these ids, postgrest caps replies at 1000 rows; keep urls short
+    for x in ids:
+        cur.append(_quote(x))
+        if len(cur) >= 500 or sum(len(c) for c in cur) > 4000:
+            chunks.append(cur)
+            cur = []
+    if cur:
+        chunks.append(cur)
+    for chunk in chunks:
         rows = http("GET", _url("seen_jobs"), headers=_headers(), params={
             "select": "external_job_id", "company_id": f"eq.{company_id}",
-            "external_job_id": f"in.({chunk})"}).json()
+            "external_job_id": f"in.({','.join(chunk)})"}).json()
         seen |= {r["external_job_id"] for r in rows}
     return seen
 
