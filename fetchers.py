@@ -159,10 +159,41 @@ def _workable_detail(c, job):
     return "".join(data.get(k) or "" for k in ("description", "requirements", "benefits"))
 
 
+def _oracle_base(c):
+    host, site = c["board"].split("/", 1)
+    return host, site, f"https://{host}/hcmRestApi/resources/latest"
+
+
+def _oracle_list(c):
+    host, site, api = _oracle_base(c)
+    jobs, offset = [], 0
+    while True:
+        data = http("GET", f"{api}/recruitingCEJobRequisitions?onlyData=true&expand=requisitionList.secondaryLocations"
+                           f"&finder=findReqs;siteNumber={site},limit=25,offset={offset},sortBy=POSTING_DATES_DESC").json()
+        item = (data.get("items") or [{}])[0]
+        reqs = item.get("requisitionList") or []
+        for r in reqs:
+            places = [r.get("PrimaryLocation")] + [s.get("Name") for s in r.get("secondaryLocations") or []]
+            jobs.append(Job(str(r["Id"]), r["Title"], "; ".join(p for p in places if p),
+                            f"https://{host}/hcmUI/CandidateExperience/en/sites/{site}/job/{r['Id']}", r))
+        offset += 25
+        if not reqs or offset >= (item.get("TotalJobsCount") or 0):
+            return jobs
+
+
+def _oracle_detail(c, job):
+    _, site, api = _oracle_base(c)
+    data = http("GET", f'{api}/recruitingCEJobRequisitionDetails?expand=all&onlyData=true'
+                       f'&finder=ById;Id="{job.id}",siteNumber={site}').json()
+    d = (data.get("items") or [{}])[0]
+    return "".join(d.get(k) or "" for k in ("ExternalDescriptionStr", "ExternalResponsibilitiesStr",
+                                            "ExternalQualificationsStr"))
+
+
 LIST = {"greenhouse": _greenhouse_list, "lever": _lever_list, "ashby": _ashby_list,
-        "workday": _workday_list, "ukg": _ukg_list, "workable": _workable_list}
+        "workday": _workday_list, "ukg": _ukg_list, "workable": _workable_list, "oracle": _oracle_list}
 DETAIL = {"greenhouse": _greenhouse_detail, "lever": _lever_detail, "ashby": _ashby_detail,
-          "workday": _workday_detail, "ukg": _ukg_detail, "workable": _workable_detail}
+          "workday": _workday_detail, "ukg": _ukg_detail, "workable": _workable_detail, "oracle": _oracle_detail}
 
 
 def fetch_list(company):

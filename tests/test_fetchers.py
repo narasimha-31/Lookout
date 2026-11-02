@@ -68,6 +68,26 @@ def test_ukg(monkeypatch):
     assert fetchers.fetch_detail(c, jobs[0]) == '<p>Hi "there"</p>'
 
 
+def test_oracle_pages(monkeypatch):
+    calls = []
+
+    def page(kw):
+        off = int(calls[-1][1].split("offset=")[1].split(",")[0])
+        reqs = [{"Id": i, "Title": "Analyst", "PrimaryLocation": "Houston, TX, United States",
+                 "secondaryLocations": [{"Name": "Midland, TX"}]} for i in range(off, min(off + 25, 30))]
+        return Resp({"items": [{"TotalJobsCount": 30, "requisitionList": reqs}]})
+
+    monkeypatch.setattr(fetchers, "http", fake_http({
+        "Details": Resp({"items": [{"ExternalDescriptionStr": "<p>A</p>", "ExternalQualificationsStr": "<p>B</p>"}]}),
+        "recruitingCEJobRequisitions": page}, calls))
+    c = {"platform": "oracle", "board": "abcd.fa.us2.oraclecloud.com/CX_1"}
+    jobs = fetchers.fetch_list(c)
+    assert len(jobs) == 30
+    assert jobs[0].location == "Houston, TX, United States; Midland, TX"
+    assert jobs[0].url == "https://abcd.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/job/0"
+    assert fetchers.fetch_detail(c, jobs[0]) == "<p>A</p><p>B</p>"
+
+
 def test_lever_detail_joins_sections():
     j = Job("1", "Analyst", "Houston", "u", {"description": "<p>A</p>",
                                             "lists": [{"text": "Needs", "content": "<li>SQL</li>"}],
