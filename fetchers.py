@@ -417,15 +417,38 @@ def _amazon_detail(c, job):
     return "".join(f"<p>{job.raw.get(k) or ''}</p>" for k in ("description", "basic_qualifications", "preferred_qualifications"))
 
 
+def _phenom_ddo(url, **kw):
+    page = http("GET", url, **kw).text
+    return json.loads(re.search(r"phApp\.ddo\s*=\s*(\{.*?\});\s*phApp\.", page, re.S).group(1))
+
+
+def _phenom_list(c):
+    # phenom sites embed the search results in the page, 100 at a time
+    jobs = []
+    while True:
+        data = _phenom_ddo(f"https://{c['board']}/search-results", params={"size": 100, "from": len(jobs)})
+        found = data.get("eagerLoadRefineSearch") or {}
+        posts = (found.get("data") or {}).get("jobs") or []
+        jobs += [Job(p["jobSeqNo"], p["title"], "; ".join(p.get("multi_location") or []) or p.get("location") or "",
+                     f"https://{c['board']}/job/{p['jobId']}", p) for p in posts]
+        if not posts or len(jobs) >= min(_cap(c), found.get("totalHits", 0)):
+            return jobs
+
+
+def _phenom_detail(c, job):
+    data = _phenom_ddo(job.url)
+    return (((data.get("jobDetail") or {}).get("data") or {}).get("job") or {}).get("description") or ""
+
+
 LIST = {"greenhouse": _greenhouse_list, "lever": _lever_list, "ashby": _ashby_list, "workday": _workday_list,
         "ukg": _ukg_list, "workable": _workable_list, "oracle": _oracle_list, "smartrecruiters": _smartrecruiters_list,
         "consider": _consider_list, "getro": _getro_list, "jibe": _jibe_list, "eightfold": _eightfold_list,
-        "rss": _rss_list, "amazon": _amazon_list}
+        "rss": _rss_list, "amazon": _amazon_list, "phenom": _phenom_list}
 DETAIL = {"greenhouse": _greenhouse_detail, "lever": _lever_detail, "ashby": _ashby_detail, "workday": _workday_detail,
           "ukg": _ukg_detail, "workable": _workable_detail, "oracle": _oracle_detail,
           "smartrecruiters": _smartrecruiters_detail, "consider": _consider_detail, "getro": _getro_detail,
           "jibe": _jibe_detail, "eightfold": _eightfold_detail, "rss": _rss_detail,
-          "amazon": _amazon_detail}
+          "amazon": _amazon_detail, "phenom": _phenom_detail}
 
 
 def fetch_list(company, newest=None):

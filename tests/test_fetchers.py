@@ -1,3 +1,5 @@
+import json
+
 import fetchers
 from fetchers import Job
 
@@ -232,3 +234,18 @@ def test_amazon(monkeypatch):
     assert (j.id, j.url) == ("10594811", "https://www.amazon.jobs/en/jobs/10594811/data-analyst")
     assert "2+ years" in fetchers.fetch_detail(c, j)
     assert calls[0][2]["params"]["country"] == "USA"
+
+
+def test_phenom(monkeypatch):
+    calls = []
+    post = {"jobSeqNo": "UFSUFAUS123EXTERNALENUS", "jobId": "123", "title": "Pricing Analyst",
+            "multi_location": ["Rosemont, Illinois, United States", "Houston, Texas, United States"], "location": "x"}
+    listing = 'x phApp.ddo = {"eagerLoadRefineSearch": {"totalHits": 1, "data": {"jobs": [%s]}}}; phApp.sessionParams = {};' % json.dumps(post)
+    detail = 'phApp.ddo = {"jobDetail": {"data": {"job": {"description": "<p>2 years</p>"}}}}; phApp.x = 1;'
+    monkeypatch.setattr(fetchers, "http", fake_http({"search-results": Resp(text=listing), "/job/123": Resp(text=detail)}, calls))
+    c = {"platform": "phenom", "board": "careers.usfoods.com/us/en"}
+    j = fetchers.fetch_list(c)[0]
+    assert (j.id, j.url) == ("UFSUFAUS123EXTERNALENUS", "https://careers.usfoods.com/us/en/job/123")
+    assert j.location == "Rosemont, Illinois, United States; Houston, Texas, United States"
+    assert calls[0][2]["params"] == {"size": 100, "from": 0}
+    assert fetchers.fetch_detail(c, j) == "<p>2 years</p>"
