@@ -118,8 +118,9 @@ def years_required(text):
     text = _clean(text)
     found = []
     for m in YEARS.finditer(text):
-        # only count years near the word experience
-        if "experience" not in text[max(0, m.start() - 100):m.end() + 100].lower():
+        # only count years near the word experience, or worded like "8+ years in consulting"
+        work = "+" in m.group(0) or re.match(r"\s+working\b", text[m.end():], re.I)
+        if not work and "experience" not in text[max(0, m.start() - 100):m.end() + 100].lower():
             continue
         # "5 years preferred" is a wish, not a bar
         if re.search(r"prefer|nice to have|a plus|bonus", text[m.end():m.end() + 60], re.I):

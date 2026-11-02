@@ -116,6 +116,9 @@ def test_min_years():
     assert years_required("1-3 years of experience in analytics") == 1
     assert years_required("THREE (3) or more years of experience in anti-money laundering") == 3
     assert years_required("5 or more years of relevant experience") == 5
+    assert years_required("8+ years in management consulting at a strategy consulting firm or similar, synthesizing "
+                          "analysis and advising senior executives. A degree or equivalent experience") == 8
+    assert years_required("5 years working in supply chain planning") == 5
     assert years_required("no experience needed") is None
     assert years_required("We have been in business 10 years") is None
     assert years_required("With over 30 years of experience serving customers") is None
