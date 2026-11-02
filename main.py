@@ -2,7 +2,7 @@ import os
 import sys
 import traceback
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 import db
@@ -99,6 +99,17 @@ def run():
     return len(companies), sent
 
 
+def heartbeat():
+    since = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
+    companies = len(db.companies())
+    seen = db.count("seen_jobs", first_seen_at=f"gte.{since}")
+    emailed = db.count("seen_jobs", first_seen_at=f"gte.{since}", emailed="eq.true")
+    bad = db.failing()
+    body = (f"Watching {companies} companies.\nLast 24 hours: {seen} new postings seen, {emailed} emailed to you.\n"
+            + ("\nFailing boards:\n" + "\n".join(bad) if bad else "\nAll job boards working."))
+    mail.send(mail.notice(f"Lookout daily: {emailed} sent, {len(bad)} failing", body))
+
+
 def _health(company_id):
     try:
         return db.health(company_id) or {}
@@ -109,7 +120,7 @@ def _health(company_id):
 if __name__ == "__main__":
     load_env()
     try:
-        run()
+        heartbeat() if "--heartbeat" in sys.argv else run()
     except Exception as e:
         # never print details, the logs are public
         print(f"run failed: {type(e).__name__}")

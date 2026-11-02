@@ -64,6 +64,17 @@ def mark_first_run(company_id):
          json={"first_run_done": True})
 
 
+def count(table, **params):
+    r = http("GET", _url(table), headers=_headers("count=exact"), params={"select": "*", "limit": "1", **params})
+    return int(r.headers.get("Content-Range", "*/0").split("/")[-1])
+
+
+def failing():
+    rows = http("GET", _url("company_health"), headers=_headers(),
+                params={"select": "last_error,companies(name)", "last_error": "not.is.null"}).json()
+    return [f"{r['companies']['name']}: {r['last_error'][:150]}" for r in rows]
+
+
 def health(company_id):
     rows = http("GET", _url("company_health"), headers=_headers(), params={"company_id": f"eq.{company_id}"}).json()
     return rows[0] if rows else None
