@@ -281,7 +281,8 @@ def _getro_list(c):
                      (p.get("organization") or {}).get("name", "")) for p in posts]
         page += 1
         if not posts or len(jobs) >= min(_cap(c), res.get("count", 0)):
-            return jobs
+            # getro tags each job with countries, keep only the ones it places in the US
+            return [j for j in jobs if "United States" in (j.raw.get("searchable_locations") or [])]
 
 
 def _getro_detail(c, job):

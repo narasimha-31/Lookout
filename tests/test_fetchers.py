@@ -140,8 +140,10 @@ def test_lever_detail_joins_sections():
 def test_getro_keeps_startup_name(monkeypatch):
     calls = []
     post = {"id": 5, "title": "Data Analyst", "locations": ["Austin, TX, USA"], "url": "https://x/5",
-            "organization": {"name": "Startup Co"}}
-    monkeypatch.setattr(fetchers, "http", fake_http({"search/jobs": Resp({"results": {"jobs": [post], "count": 1}})}, calls))
+            "organization": {"name": "Startup Co"}, "searchable_locations": ["Austin, TX, USA", "United States"]}
+    riga = {"id": 6, "title": "Consulting Analyst", "locations": ["Riga, Latvia"], "url": "https://x/6",
+            "organization": {"name": "Pismo"}, "searchable_locations": ["Riga, Latvia", "Latvia"]}
+    monkeypatch.setattr(fetchers, "http", fake_http({"search/jobs": Resp({"results": {"jobs": [post, riga], "count": 2}})}, calls))
     jobs = fetchers.fetch_list({"platform": "getro", "board": "8672"})
     assert (jobs[0].id, jobs[0].company, jobs[0].location) == ("5", "Startup Co", "Austin, TX, USA")
 
