@@ -4,3 +4,4 @@ __pycache__/
 .venv/
 Career Page Job Tracker - Build Spec.md
 plan.md
+.playwright-mcp/
