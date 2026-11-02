@@ -1,0 +1,68 @@
+import os
+
+from fetchers import http
+
+
+def _headers(prefer=None):
+    key = os.environ["SUPABASE_KEY"]
+    # supabase rejects secret keys sent with a browser user agent
+    h = {"apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json", "User-Agent": "lookout"}
+    if prefer:
+        h["Prefer"] = prefer
+    return h
+
+
+def _url(table):
+    return os.environ["SUPABASE_URL"].rstrip("/") + "/rest/v1/" + table
+
+
+def companies():
+    return http("GET", _url("companies"), headers=_headers(), params={"active": "eq.true", "order": "id"}).json()
+
+
+def filters():
+    return http("GET", _url("filters"), headers=_headers(), params={"id": "eq.1"}).json()[0]
+
+
+def _quote(value):
+    return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+def seen_ids(company_id, ids):
+    seen = set()
+    # look up only these ids, postgrest caps replies at 1000 rows
+    for i in range(0, len(ids), 50):
+        chunk = ",".join(_quote(x) for x in ids[i:i + 50])
+        rows = http("GET", _url("seen_jobs"), headers=_headers(), params={
+            "select": "external_job_id", "company_id": f"eq.{company_id}",
+            "external_job_id": f"in.({chunk})"}).json()
+        seen |= {r["external_job_id"] for r in rows}
+    return seen
+
+
+def is_repost(company_id, title, location):
+    rows = http("GET", _url("seen_jobs"), headers=_headers(), params={
+        "select": "id", "company_id": f"eq.{company_id}", "title": f"eq.{title}",
+        "location": f"eq.{location}", "limit": "1"}).json()
+    return bool(rows)
+
+
+def save_jobs(rows):
+    for i in range(0, len(rows), 500):
+        http("POST", _url("seen_jobs"), headers=_headers("resolution=ignore-duplicates,return=minimal"),
+             params={"on_conflict": "company_id,external_job_id"}, json=rows[i:i + 500])
+
+
+def mark_first_run(company_id):
+    http("PATCH", _url("companies"), headers=_headers("return=minimal"), params={"id": f"eq.{company_id}"},
+         json={"first_run_done": True})
+
+
+def health(company_id):
+    rows = http("GET", _url("company_health"), headers=_headers(), params={"company_id": f"eq.{company_id}"}).json()
+    return rows[0] if rows else None
+
+
+def set_health(company_id, **fields):
+    http("POST", _url("company_health"), headers=_headers("resolution=merge-duplicates,return=minimal"),
+         json={"company_id": company_id, **fields})
