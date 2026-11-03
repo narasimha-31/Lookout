@@ -479,7 +479,8 @@ def _sitemap_list(c):
     urls = sorted({u: d for u, d in urls if "/job/" in u}.items(), key=lambda x: x[1], reverse=True)
     jobs = []
     for url, _ in urls[:int(min(_cap(c), len(urls)))]:
-        slug = url.rstrip("/").rsplit("/", 1)[-1]
+        # the title is the last part with letters, ".../job/plymouth/data-analyst/34088/1027..." included
+        slug = next((p for p in reversed(url.rstrip("/").split("/")) if re.search(r"[a-z]", p, re.I)), "")
         jobs.append(Job(url, re.sub(r"^\d+-", "", slug).replace("-", " "), "", url))
     return jobs
 

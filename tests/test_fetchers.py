@@ -295,6 +295,9 @@ def test_sitemap(monkeypatch):
     j = jobs[0]
     assert fetchers.fetch_detail(c, j) == "<p>2 years</p>"
     assert (j.title, j.location) == ("Data Analyst", "Austin, Texas")
+    uhg = "<urlset><url><loc>https://y.com/job/plymouth/data-analyst/34088/1027</loc><lastmod>2026-11-01</lastmod></url></urlset>"
+    monkeypatch.setattr(fetchers, "http", fake_http({"y.com": Resp(text=uhg)}, calls))
+    assert fetchers.fetch_list({"platform": "sitemap", "board": "y.com/sitemap.xml"})[0].title == "data analyst"
 
 
 def test_icims(monkeypatch):
