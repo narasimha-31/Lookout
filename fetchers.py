@@ -426,7 +426,9 @@ def _phenom_list(c):
     # phenom sites embed the search results in the page, 100 at a time
     jobs = []
     while True:
-        data = _phenom_ddo(f"https://{c['board']}/search-results", params={"size": 100, "from": len(jobs)})
+        # unsorted results put new jobs anywhere, past the newest-200 window
+        data = _phenom_ddo(f"https://{c['board']}/search-results",
+                           params={"size": 100, "from": len(jobs), "sortBy": "Most recent"})
         found = data.get("eagerLoadRefineSearch") or {}
         posts = (found.get("data") or {}).get("jobs") or []
         jobs += [Job(p["jobSeqNo"], p["title"], "; ".join(p.get("multi_location") or []) or p.get("location") or "",

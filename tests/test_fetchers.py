@@ -247,7 +247,7 @@ def test_phenom(monkeypatch):
     j = fetchers.fetch_list(c)[0]
     assert (j.id, j.url) == ("UFSUFAUS123EXTERNALENUS", "https://careers.usfoods.com/us/en/job/123")
     assert j.location == "Rosemont, Illinois, United States; Houston, Texas, United States"
-    assert calls[0][2]["params"] == {"size": 100, "from": 0}
+    assert calls[0][2]["params"] == {"size": 100, "from": 0, "sortBy": "Most recent"}
     assert fetchers.fetch_detail(c, j) == "<p>2 years</p>"
 
 
