@@ -114,6 +114,7 @@ def test_dealbreakers():
         "Candidates who need H-1B transfer are welcome to apply.",
         "If you prefer that your profile not be used in this process, you can opt out at any time.",
         "Where roles have hard requirements (eg days in office, unable to provide visas, etc), tell us.",
+        "- Employer sponsored health, dental and vision plan with no monthly premium",
     ]
     for s in allowed:
         assert dealbreakers(s, F) == [], s

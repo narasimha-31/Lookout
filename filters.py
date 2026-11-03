@@ -140,7 +140,9 @@ CITIZEN = re.compile(r"citizen|green ?card|permanent resident|\bu\.?s\.? persons
 REQUIRED = re.compile(r"\b(must|required?|requires|requirement|only|need|needs|eligible|obtain)\b", re.I)
 CLEARANCE = re.compile(r"security clearance|secret clearance|\bts/sci\b|public trust", re.I)
 # equal opportunity and e-verify text mentions citizenship without restricting it
-BOILERPLATE = re.compile(r"regard|discriminat|equal (employment )?opportunity|e-verify|\bi-9\b|protected", re.I)
+BOILERPLATE = re.compile(r"regard|discriminat|equal (employment )?opportunity|e-verify|\bi-9\b|protected"
+                         # "employer sponsored health plan" is a benefit, not a visa
+                         r"|sponsored (health|medical|dental|vision|benefit|insurance|plan|401|retirement|events?)", re.I)
 STUDENT = re.compile(r"currently enrolled|current(ly)? (a )?(student|pursuing)|pursuing an? (bachelor|master|undergrad|graduate|degree)"
                      r"|rising (junior|senior)|returning to school|enrolled in an? (accredited )?(university|college|degree)"
                      r"|expected graduation|graduation date|ongoing studies|fit your studies|student position", re.I)
