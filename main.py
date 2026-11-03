@@ -49,7 +49,8 @@ def check(company, f, before=None):
 
     seen = db.seen_ids(company["id"], [j.id for j in jobs])
     new = [j for j in jobs if j.id not in seen]
-    skipped = [j for j in new if not (flt.title_ok(j.title, f) and flt.location_ok(j.location, f))]
+    skipped = [j for j in new if not ((flt.title_ok(j.title, f) or flt.title_maybe(j.title, f))
+                                      and flt.location_ok(j.location, f))]
     if skipped:
         db.save_jobs([_row(company, j) for j in skipped])
 
@@ -58,8 +59,10 @@ def check(company, f, before=None):
         jd = fetchers.fetch_detail(company, job)
         text = flt.html_to_text(jd)
         years = flt.years_required(text)
-        if (flt.dealbreakers(text, f) or flt.student_only(job.title, text) or flt.abroad(job.location, text, f)
-                or (years is not None and years >= 3)):
+        # an analyst title we don't know needs the usual skills in the description
+        unsure = not flt.title_ok(job.title, f) and not flt.skills_ok(text)
+        if (unsure or flt.dealbreakers(text, f) or flt.student_only(job.title, text) or flt.abroad(job.location, text, f)
+                or (years is not None and years > 3)):
             db.save_jobs([_row(company, job)])
             continue
         repost = db.is_repost(company["id"], job.title, job.location)
@@ -133,7 +136,7 @@ def heartbeat():
             + ("\nFailing boards:\n" + "\n".join(bad) if bad else "\nAll job boards working."))
     mail.send(mail.notice(f"Lookout daily: {emailed} sent, {len(bad)} failing", body))
     f = db.filters()
-    db.prune(lambda title: flt.title_ok(title, f))
+    db.prune(lambda title: flt.title_ok(title, f) or flt.title_maybe(title, f))
 
 
 if __name__ == "__main__":

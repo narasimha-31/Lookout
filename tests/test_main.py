@@ -68,7 +68,7 @@ def test_rejected_jobs_are_saved_not_emailed(world):
 
 def test_experience_cutoff(world):
     world["jobs"] = [job(1), job(2), job(3)]
-    world["jd"] = {"1": "<p>3-6 years of experience</p>", "2": "<p>1-3 years of experience with SQL</p>",
+    world["jd"] = {"1": "<p>4-6 years of experience</p>", "2": "<p>1-3 years of experience with SQL</p>",
                    "3": "<p>2+ years of experience</p>"}
     assert main.check(company(), F)[0] == 2
 

@@ -13,8 +13,53 @@ def _matches(terms, text, flags=re.I):
     return [t for t in terms if re.search(r"(?<!\w)" + re.escape(t) + r"(?!\w)", text, flags)]
 
 
+ROLES = ["analyst", "engineer", "developer", "specialist", "associate", "planner", "coordinator", "buyer", "intern",
+         "internship", "co-op"]
+# engineers and developers only count for data work, not "Data Center Engineer" style titles
+BUILDERS = ["engineer", "developer"]
+DATA_DOMAINS = ["data", "analytics", "bi", "business intelligence", "etl", "sql", "reporting", "power bi", "tableau",
+                "database", "data warehouse", "visualization", "gis"]
+# associates, specialists and interns are too broad for words like operations or product
+CORE_DOMAINS = DATA_DOMAINS + ["fp&a", "finance", "financial", "supply chain", "demand", "procurement", "sourcing",
+                               "pricing", "information systems", "s&op", "insights"]
+WORK = ["fp&a", "financial planning and analysis", "financial analysis", "business intelligence", "analytics",
+        "data analysis", "data engineering"]
+SKILLS = ["sql", "excel", "python", "power bi", "tableau", "looker", "snowflake", "etl", "dashboards?", "data analysis"]
+TERRITORIES = re.compile(r"puerto rico|guam|virgin islands|american samoa|mariana islands|\bPR\b(?=,? (US|USA|United States)\b|$)", re.I)
+PARTS = re.compile(r"\s[-–—|/]\s|[,()|:–—]")
+LEVEL = re.compile(r"\b([ivx]+|\d+|jr\.?|junior|entry[- ]level|level \w+)\b", re.I)
+
+
+def _roles(title, f):
+    """Yields (role, matched) for each role word, matched when a domain word sits with it."""
+    if _matches(f["title_exclude"], title):
+        return
+    parts = [p.strip() for p in PARTS.split(title) if p.strip()]
+    for part in parts:
+        roles = [r.lower() for r in _matches(ROLES, part)]
+        # "Analyst, Supply Chain Planning": a role on its own takes its domain from the other parts
+        alone = LEVEL.sub("", part).strip(" .").lower() in roles
+        for role in roles:
+            if role in BUILDERS:
+                yield role, any(_matches(DATA_DOMAINS, p) for p in (parts if alone else [part]))
+            else:
+                yield role, bool(_matches(f["title_include"] if role in ("analyst", "planner") else CORE_DOMAINS, title))
+
+
 def title_ok(title, f):
-    return not _matches(f["title_exclude"], title) and bool(_matches(f["title_include"], title))
+    # some titles name only the work, like "Financial Planning and Analysis"
+    work = not _matches(f["title_exclude"], title) and _matches(WORK, title)
+    return bool(work) or any(ok for _, ok in _roles(title, f))
+
+
+def title_maybe(title, f):
+    # an analyst title without a known domain, worth reading the description for
+    return not title_ok(title, f) and any(r == "analyst" for r, _ in _roles(title, f))
+
+
+def skills_ok(text):
+    found = {s for s in SKILLS if re.search(rf"(?<!\w){s}(?!\w)", text, re.I)}
+    return len(found) >= 2
 
 
 def _us_marked(place, f):
@@ -27,6 +72,9 @@ def _us_marked(place, f):
 
 
 def _place_ok(place, f):
+    # territories often say "United States" too
+    if TERRITORIES.search(place):
+        return False
     # "IN-Pune", "CA-Ontario-Toronto": a leading code is a country, only US- is ours
     m = re.match(r"\s*([A-Z]{3})( - |-)\S", place)
     if m:
@@ -126,24 +174,64 @@ def student_only(title, text):
     return bool(re.search(r"\bintern(ship)?\b|co-op", title, re.I) and STUDENT.search(text))
 
 
+PREFERRED = re.compile(r"(preferred|desired|additional) (qualifications?|skills|experience|requirements)|nice[- ]to[- ]haves?"
+                       r"|bonus points|preferred:", re.I)
+HEADING = re.compile(r"(required|basic|minimum|must[- ]haves?|qualifications|requirements|what you|who you|about you"
+                     r"|your experience|experience|skills|education|responsibilities)\b", re.I)
+HISTORY = re.compile(r"award|winn|history|founded|\bserv(e|es|ed|ing)\b|been in business|in business for|leader|anniversar|legacy|celebrat"
+                     r"|\bour \d|\bwe('ve| have)\b|company has", re.I)
+GENERAL = re.compile(r"\s*(of\s+)?((professional|relevant|related|work|working|industry|progressive|full[- ]time|total"
+                     r"|overall|prior|previous|practical|hands[- ]on|post[- ]graduate)\s+)*(experience|exp)\b"
+                     # plain means nothing narrows it, "experience analyzing data" or "experience with SQL" is a skill
+                     r"(?=\s*($|[.,;:)]|(is )?required|needed|minimum|or\b|and\b|in an? (similar|related|relevant|comparable)"
+                     r"|in (the|this|a) (field|industry|role)))", re.I)
+DEGREES = re.compile(r"bachelor|master|degree|\bBS\b|\bMS\b|equivalent", re.I)
+
+
+def _required_lines(text):
+    # headings glued to the line before, like "teamsPreferred Qualifications:"
+    text = PREFERRED.sub(lambda m: "\n" + m.group(0), text.replace("’", "'"))
+    keep, preferred = [], False
+    for line in text.splitlines():
+        s = line.strip(" -*•\t")
+        if PREFERRED.match(s):
+            preferred = True
+        else:
+            if len(s) < 60 and HEADING.match(s):
+                preferred = False
+            if not preferred:
+                keep.append(s)
+    return keep
+
+
 def years_required(text):
-    text = _clean(text)
-    found = []
-    for m in YEARS.finditer(text):
-        # only count years near the word experience, or worded like "8+ years in consulting"
-        work = "+" in m.group(0) or re.match(r"\s+working\b", text[m.end():], re.I)
-        if not work and "experience" not in text[max(0, m.start() - 100):m.end() + 100].lower():
+    general, skill = [], []
+    for s in (s for line in _required_lines(text) for s in _sentences(line)):
+        if HISTORY.search(s):
             continue
-        # "5 years preferred" is a wish, not a bar
-        if re.search(r"prefer|nice to have|a plus|bonus", text[m.end():m.end() + 60], re.I):
-            continue
-        first = m.group(1).lower()
-        n = NUMBER_WORDS.get(first) or int(first)
-        # bigger numbers are company history, like "over 30 years of experience"
-        if n <= 15:
-            found.append(n)
-    # ranges count by their low end, but the strictest requirement is the real bar
-    return max(found) if found else None
+        plain, narrow = [], []
+        for m in YEARS.finditer(s):
+            # "8+ years in consulting" or "5 years working" count without the word experience
+            work = "+" in m.group(0) or re.match(r"\s+(or more\s+)?(working|in|as)\b", s[m.end():], re.I)
+            if "experience" not in s.lower() and not work:
+                continue
+            # "5 years preferred" is a wish, not a bar
+            if re.search(r"prefer|nice to have|a plus|bonus", s[m.end():m.end() + 30], re.I):
+                continue
+            first = m.group(1).lower()
+            n = NUMBER_WORDS.get(first) or int(first)
+            # bigger numbers are company history, like "over 30 years of experience"
+            if n <= 15:
+                (plain if GENERAL.match(s[m.end():]) else narrow).append(n)
+        # "5+ years with a bachelor's (or 3+ with a master's)" is one requirement, the easier path counts
+        if DEGREES.search(s) and len(plain + narrow) > 1:
+            plain, narrow = [min(plain + narrow)], []
+        general += plain
+        skill += narrow
+    # skill lines only matter when there is no plain requirement, then the first one is the main one
+    if general:
+        return min(general)
+    return skill[0] if skill else None
 
 
 def pay(text):

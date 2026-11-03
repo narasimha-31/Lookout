@@ -1,8 +1,11 @@
-from filters import abroad, dealbreakers, html_to_text, location_ok, years_required, pay, student_only, title_ok
+from filters import (abroad, dealbreakers, html_to_text, location_ok, years_required, pay, skills_ok, student_only,
+                     title_maybe, title_ok)
 
 F = {
-    "title_include": ["analyst", "data engineer", "sql"],
-    "title_exclude": ["senior", "sr", "lead", "manager"],
+    "title_include": ["data", "analytics", "bi", "business intelligence", "finance", "financial", "fp&a", "supply chain",
+                      "planning", "demand", "procurement", "marketing", "investment", "product", "business", "operations"],
+    "title_exclude": ["senior", "sr", "lead", "manager", "data center", "data entry", "helpdesk", "pqa", "scientist",
+                      "cybersecurity", "benefits", "product support"],
     "dealbreakers": ["unable to sponsor", "no sponsorship", "security clearance"],
     "locations_allowed": ["United States", "USA", "US", "Texas", "TX", "CA"],
     "locations_blocked": ["Canada", "India", "(DE)", "(CA)"],
@@ -10,13 +13,32 @@ F = {
 
 
 def test_titles():
-    assert title_ok("Data Analyst", F)
-    assert title_ok("Associate Data Engineer", F)
-    assert not title_ok("Senior Data Analyst", F)
-    assert not title_ok("Sr. Analyst", F)
-    assert not title_ok("Analyst Manager", F)
-    assert not title_ok("Leadership Coordinator", F)
-    assert title_ok("Supply Chain Analyst - Leadership Program", F)
+    good = ["Data Analyst", "Associate Data Engineer", "Supply Chain Analyst - Leadership Program", "Analytics Engineer",
+            "Analyst, Supply Chain Planning", "Corp FP&A Financial Analyst II - (B2)", "Business Intelligence Analyst - Marketing",
+            "Data Engineer with PostgreSQL", "Procurement Planner", "Marketing Analyst", "Investment Analyst",
+            "Export & Agency Finance (EAF US) - LatAm Focus - Analyst", "BI Developer", "Data Analytics Intern",
+            "Product Associate, Data & Analytics-Payments", "Engineer, Data Platform", "Financial Planning and Analysis",
+            "Strategic Analytics [Multiple Positions Available]", "Buyer - Procurement Planning"]
+    bad = ["Senior Data Analyst", "Sr. Analyst", "Analyst Manager", "Leadership Coordinator",
+           "Data Center Critical Infrastructure Engineer", "Modem System Test Engineer -  6G/5G Data and Networking",
+           "Administrative Support Representative/Data Entry Operator", "PQA Analyst", "Helpdesk Analyst", "Data Scientist",
+           "Cybersecurity Analyst I", "Benefits Support Analyst, Missed Enrollments (US)", "Product Support Analyst",
+           "Laboratory Informatics Master Data Assistant", "AI Engineer", "Managing SAP Consultant Basis",
+           "Software Engineer", "Data Center Asset Management, Commercial Associate"]
+    for t in good:
+        assert title_ok(t, F), t
+    for t in bad:
+        assert not title_ok(t, F), t
+
+
+def test_unknown_analyst_titles_need_skills():
+    assert title_maybe("Transcript Analyst I", F)
+    assert title_maybe("Labor & Productivity Analyst", F)
+    assert not title_maybe("Data Analyst", F)
+    assert not title_maybe("PQA Analyst", F)
+    assert not title_maybe("Software Engineer", F)
+    assert skills_ok("Strong SQL and Excel skills, build dashboards")
+    assert not skills_ok("Review transcripts for accuracy using Excel")
 
 
 def test_locations():
@@ -44,6 +66,9 @@ def test_locations():
     assert location_ok("USA - Texas - Houston", F)
     assert not location_ok("Kulim, 02 (MY)", F)
     assert location_ok("Houston (US)", F)
+    assert not location_ok("Barceloneta, Puerto Rico", F)
+    assert not location_ok("San Juan, PR, United States", F)
+    assert not location_ok("Hagatna, Guam, USA", F)
     tn = {**F, "locations_allowed": F["locations_allowed"] + ["Tennessee", "TN"]}
     assert not location_ok("Tennessee, USA; Bengaluru, Karnataka, India; Chennai, Tamil Nadu, India", tn)
     assert location_ok("Nashville, TN; Bengaluru, Karnataka, India", tn)
@@ -128,6 +153,21 @@ def test_min_years():
     assert years_required("8+ years in management consulting at a strategy consulting firm or similar, synthesizing "
                           "analysis and advising senior executives. A degree or equivalent experience") == 8
     assert years_required("5 years working in supply chain planning") == 5
+    assert years_required("Five years running as industry award winner. Requires 1 year of data analysis experience.") == 1
+    uhg = ("Required Qualifications:\n- 2+ years of experience with data engineering, SQL and ETL tools\n"
+           "- 2+ years of experience with big data processing\n- 1+ years of experience with cloud tools\n"
+           "- Proven ability to collaborate across teamsPreferred Qualifications:\n- 4+ years of experience in software engineering")
+    assert years_required(uhg) == 2
+    assert years_required("- 5+ years of healthcare domain experience\n- 3+ years of relevant experience") == 3
+    assert years_required("Bachelor's degree and 4 years of experience, or Master's degree and 2 years of experience") == 2
+    assert years_required("Bachelor's Degree with 5+ years (or Master's with 3+ years, or equivalent 8+ years) of "
+                          "professional experience in data analysis.") == 3
+    assert years_required("2-4+ years of experience in business analytics, finance/accounting, or related field(s)") == 2
+    assert years_required("- 2+ years of experience with SQL\n- 1+ years of experience analyzing data using cloud tools") == 2
+    assert years_required("Requirements:\n- 2 years of experience\nNice to have:\n- 6+ years of experience in banking") == 2
+    assert years_required("3 years or more in a similar procurement, sourcing or supply chain role") == 3
+    assert years_required("2 years in Revenue Cycle Operations in a hospital setting, multi-hospital setting preferred") == 2
+    assert years_required("Minimum Qualifications:\n- High school diploma\nPreferred Qualifications:\n- 2-4 years of accounting experience") is None
     assert years_required("no experience needed") is None
     assert years_required("We have been in business 10 years") is None
     assert years_required("With over 30 years of experience serving customers") is None
