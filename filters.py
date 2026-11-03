@@ -24,7 +24,10 @@ CORE_DOMAINS = DATA_DOMAINS + ["fp&a", "finance", "financial", "supply chain", "
                                "pricing", "information systems", "s&op", "insights"]
 WORK = ["fp&a", "financial planning and analysis", "financial analysis", "business intelligence", "analytics",
         "data analysis", "data engineering"]
-SKILLS = ["sql", "excel", "python", "power bi", "tableau", "looker", "snowflake", "etl", "dashboards?", "data analysis"]
+# from the resume, one is enough since years and sponsorship still decide
+SKILLS = ["sql", "excel", "python", "power bi", "power query", "dax", "tableau", "looker", "snowflake", "etl", "dashboards?",
+          "data analysis", "pivot tables?", "xlookup", "vlookup", "pandas", "postgresql", "sql server", "bigquery", "airflow",
+          "dbt", "kafka", "sap", "s/4hana", "smartsheet", "jira", "gis", "qgis", "postgis", "databricks"]
 TERRITORIES = re.compile(r"puerto rico|guam|virgin islands|american samoa|mariana islands|\bPR\b(?=,? (US|USA|United States)\b|$)", re.I)
 PARTS = re.compile(r"\s[-–—|/]\s|[,()|:–—]")
 LEVEL = re.compile(r"\b([ivx]+|\d+|jr\.?|junior|entry[- ]level|level \w+)\b", re.I)
@@ -58,8 +61,7 @@ def title_maybe(title, f):
 
 
 def skills_ok(text):
-    found = {s for s in SKILLS if re.search(rf"(?<!\w){s}(?!\w)", text, re.I)}
-    return len(found) >= 2
+    return any(re.search(rf"(?<!\w){s}(?!\w)", text, re.I) for s in SKILLS)
 
 
 def _us_marked(place, f):

@@ -40,7 +40,8 @@ def test_unknown_analyst_titles_need_skills():
     assert not title_maybe("PQA Analyst", F)
     assert not title_maybe("Software Engineer", F)
     assert skills_ok("Strong SQL and Excel skills, build dashboards")
-    assert not skills_ok("Review transcripts for accuracy using Excel")
+    assert skills_ok("Review transcripts for accuracy using Excel")
+    assert not skills_ok("Review transcripts for accuracy and answer calls")
 
 
 def test_locations():

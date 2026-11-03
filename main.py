@@ -59,7 +59,7 @@ def check(company, f, before=None):
         jd = fetchers.fetch_detail(company, job)
         text = flt.html_to_text(jd)
         years = flt.years_required(text)
-        # an analyst title we don't know needs the usual skills in the description
+        # an analyst title we don't know needs one of the resume skills in the description
         unsure = not flt.title_ok(job.title, f) and not flt.skills_ok(text)
         if (unsure or flt.dealbreakers(text, f) or flt.student_only(job.title, text) or flt.abroad(job.location, text, f)
                 or (years is not None and years > 3)):
