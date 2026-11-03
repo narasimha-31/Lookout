@@ -9,8 +9,12 @@ create table companies (
   overrides jsonb not null default '{}',
   active boolean not null default true,
   first_run_done boolean not null default false,
-  added_at timestamptz not null default now()
+  added_at timestamptz not null default now(),
+  -- why a company is switched off
+  note text
 );
+-- a board can only be added once, so blocked companies are caught on re-add
+create unique index companies_board_unique on companies (lower(board), coalesce(site, ''));
 
 create table seen_jobs (
   id bigint generated always as identity primary key,
