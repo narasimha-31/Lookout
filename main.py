@@ -139,10 +139,56 @@ def heartbeat():
     db.prune(lambda title: flt.title_ok(title, f) or flt.title_maybe(title, f))
 
 
+AUDIT_JDS = 10
+AUDIT_BLOCK = 4
+
+
+def _audit_one(c, f):
+    """Returns (descriptions read, the dealbreaker lines found) for the company's newest matching jobs."""
+    jobs = [j for j in fetchers.fetch_list(c, NEWEST)
+            if (flt.title_ok(j.title, f) or flt.title_maybe(j.title, f)) and flt.location_ok(j.location, f)]
+    read, hits = 0, []
+    for job in jobs:
+        if read == AUDIT_JDS:
+            break
+        text = flt.html_to_text(fetchers.fetch_detail(c, job))
+        if not (flt.title_ok(job.title, f) or flt.skills_ok(text)):
+            continue
+        read += 1
+        hits += flt.dealbreakers(text, f)[:1]
+    return read, hits
+
+
+def audit():
+    # companies change their wording, so recheck every company's newest descriptions each week
+    f = db.filters()
+    companies = db.companies()
+
+    def safe(c):
+        try:
+            return _audit_one(c, f)
+        except Exception:
+            return 0, []
+    with ThreadPoolExecutor(8) as pool:
+        results = list(pool.map(safe, companies))
+    paused, close = [], []
+    day = datetime.now(ZoneInfo("America/Chicago")).strftime("%Y-%m-%d")
+    for c, (read, hits) in zip(companies, results):
+        if len(hits) >= AUDIT_BLOCK:
+            db.pause(c["id"], f"blocked: no sponsorship {len(hits)}/{read} (weekly check {day})")
+            paused.append(f"{c['name']}: {len(hits)} of {read}, e.g. {hits[0][:110]}")
+        elif hits:
+            close.append(f"{c['name']}: {len(hits)} of {read}")
+    body = (f"Checked the newest descriptions at {len(companies)} companies.\n\n"
+            + ("Paused, 4 or more say no sponsorship or citizenship:\n" + "\n".join(paused) if paused else "Nothing paused.")
+            + ("\n\nClose, still tracked:\n" + "\n".join(close) if close else ""))
+    mail.send(mail.notice(f"Lookout weekly: {len(paused)} paused", body))
+
+
 if __name__ == "__main__":
     load_env()
     try:
-        heartbeat() if "--heartbeat" in sys.argv else run()
+        audit() if "--audit" in sys.argv else heartbeat() if "--heartbeat" in sys.argv else run()
     except Exception as e:
         # never print details, the logs are public
         print(f"run failed: {type(e).__name__}")

@@ -162,3 +162,24 @@ def test_unchanged_board_skips_database(world, monkeypatch):
     world["jobs"] = [job(1), job(2, "BI Analyst")]
     main.run()
     assert lookups == [1]
+
+
+def test_weekly_audit_pauses_companies_that_stopped_sponsoring(world, monkeypatch):
+    paused = []
+    monkeypatch.setattr(main.db, "pause", lambda cid, note: paused.append((cid, note)))
+    monkeypatch.setattr(main.db, "companies", lambda: [company(1), company(2)])
+    world["jobs"] = [job(i) for i in range(1, 7)]
+    world["jd"] = {str(i): "<p>No sponsorship for this role.</p>" for i in range(1, 5)}
+    main.audit()
+    assert [cid for cid, _ in paused] == [1, 2] and "4/6" in paused[0][1]
+    assert world["sent"] == ["Lookout weekly: 2 paused"]
+
+
+def test_weekly_audit_keeps_companies_with_few_hits(world, monkeypatch):
+    paused = []
+    monkeypatch.setattr(main.db, "pause", lambda cid, note: paused.append(cid))
+    monkeypatch.setattr(main.db, "companies", lambda: [company(1)])
+    world["jobs"] = [job(i) for i in range(1, 12)]
+    world["jd"] = {str(i): "<p>No sponsorship for this role.</p>" for i in range(1, 4)}
+    main.audit()
+    assert paused == [] and world["sent"] == ["Lookout weekly: 0 paused"]

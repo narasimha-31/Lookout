@@ -65,6 +65,11 @@ def mark_first_run(company_id):
          json={"first_run_done": True})
 
 
+def pause(company_id, note):
+    http("PATCH", _url("companies"), headers=_headers("return=minimal"), params={"id": f"eq.{company_id}"},
+         json={"active": False, "note": note})
+
+
 def count(table, **params):
     r = http("GET", _url(table), headers=_headers("count=exact"), params={"select": "*", "limit": "1", **params})
     return int(r.headers.get("Content-Range", "*/0").split("/")[-1])
