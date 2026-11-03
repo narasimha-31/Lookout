@@ -14,7 +14,7 @@ create table companies (
   note text
 );
 -- a board can only be added once, so blocked companies are caught on re-add
-create unique index companies_board_unique on companies (lower(board), coalesce(site, ''));
+create unique index companies_board_unique on companies (lower(board), lower(coalesce(site, '')));
 
 create table seen_jobs (
   id bigint generated always as identity primary key,
