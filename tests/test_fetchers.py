@@ -307,3 +307,12 @@ def test_icims(monkeypatch):
     assert (j.id, j.title, j.location) == ("3483", "Energy Risk & Analyst", "US-TX-Houston")
     assert j.url == "https://careers-x.icims.com/jobs/3483/energy-risk-analyst/job"
     assert len(calls) == 2
+
+
+def test_rippling(monkeypatch):
+    calls = []
+    page = '<a href="/job/1063983/project-finance-analyst" aria-label="Link to job discription for Project Finance &amp; Analyst">'
+    monkeypatch.setattr(fetchers, "http", fake_http({"rippling-ats.com/": Resp(text=page)}, calls))
+    j = fetchers.fetch_list({"platform": "rippling", "board": "net-power-llc.rippling-ats.com"})[0]
+    assert (j.id, j.title) == ("1063983", "Project Finance & Analyst")
+    assert j.url == "https://net-power-llc.rippling-ats.com/job/1063983/project-finance-analyst"

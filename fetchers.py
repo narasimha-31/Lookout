@@ -524,15 +524,21 @@ def _icims_list(c):
             return jobs
 
 
+def _rippling_list(c):
+    page = http("GET", f"https://{c['board']}/", headers={"Accept": "text/html"}).text
+    found = re.findall(r'href="(/job/(\d+)/[^"]+)" aria-label="Link to job discription for ([^"]+)"', page)
+    return [Job(jid, html.unescape(title), "", f"https://{c['board']}{path}") for path, jid, title in found]
+
+
 LIST = {"greenhouse": _greenhouse_list, "lever": _lever_list, "ashby": _ashby_list, "workday": _workday_list,
         "ukg": _ukg_list, "workable": _workable_list, "oracle": _oracle_list, "smartrecruiters": _smartrecruiters_list,
         "consider": _consider_list, "getro": _getro_list, "jibe": _jibe_list, "eightfold": _eightfold_list,
-        "rss": _rss_list, "amazon": _amazon_list, "phenom": _phenom_list, "sfxml": _sfxml_list, "bamboohr": _bamboohr_list, "sitemap": _sitemap_list, "icims": _icims_list}
+        "rss": _rss_list, "amazon": _amazon_list, "phenom": _phenom_list, "sfxml": _sfxml_list, "bamboohr": _bamboohr_list, "sitemap": _sitemap_list, "icims": _icims_list, "rippling": _rippling_list}
 DETAIL = {"greenhouse": _greenhouse_detail, "lever": _lever_detail, "ashby": _ashby_detail, "workday": _workday_detail,
           "ukg": _ukg_detail, "workable": _workable_detail, "oracle": _oracle_detail,
           "smartrecruiters": _smartrecruiters_detail, "consider": _consider_detail, "getro": _getro_detail,
           "jibe": _jibe_detail, "eightfold": _eightfold_detail, "rss": _rss_detail,
-          "amazon": _amazon_detail, "phenom": _phenom_detail, "sfxml": _rss_detail, "bamboohr": _bamboohr_detail, "sitemap": _sitemap_detail, "icims": _icims_detail}
+          "amazon": _amazon_detail, "phenom": _phenom_detail, "sfxml": _rss_detail, "bamboohr": _bamboohr_detail, "sitemap": _sitemap_detail, "icims": _icims_detail, "rippling": _sitemap_detail}
 
 
 def fetch_list(company, newest=None):
