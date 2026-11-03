@@ -183,3 +183,14 @@ def test_weekly_audit_keeps_companies_with_few_hits(world, monkeypatch):
     world["jd"] = {str(i): "<p>No sponsorship for this role.</p>" for i in range(1, 4)}
     main.audit()
     assert paused == [] and world["sent"] == ["Lookout weekly: 0 paused"]
+
+
+def test_broken_posting_does_not_block_others(world, monkeypatch):
+    world["jobs"] = [job(1), job(2)]
+    real = main.fetchers.fetch_detail
+    monkeypatch.setattr(main.fetchers, "fetch_detail", lambda c, j: (_ for _ in ()).throw(OSError("404")) if j.id == "1" else real(c, j))
+    sent, _, fingerprint = main.check(company(), F)
+    assert sent == 1 and fingerprint is None
+    assert [r["external_job_id"] for r in world["saved"]] == ["2"]
+    monkeypatch.setattr(main.fetchers, "fetch_detail", real)
+    assert main.check(company(), F, {"ids_hash": fingerprint})[0] == 1

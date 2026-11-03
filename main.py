@@ -54,9 +54,15 @@ def check(company, f, before=None):
     if skipped:
         db.save_jobs([_row(company, j) for j in skipped])
 
-    sent = 0
-    for job in (j for j in new if j not in skipped):
-        jd = fetchers.fetch_detail(company, job)
+    sent, errored = 0, False
+    skipped_ids = {j.id for j in skipped}
+    for job in (j for j in new if j.id not in skipped_ids):
+        try:
+            jd = fetchers.fetch_detail(company, job)
+        except Exception:
+            # one broken posting shouldn't hold up the rest, it's retried next run
+            errored = True
+            continue
         text = flt.html_to_text(jd)
         years = flt.years_required(text)
         # an analyst title we don't know needs one of the resume skills in the description
@@ -77,7 +83,8 @@ def check(company, f, before=None):
         mail.send(mail.job_email(name, job, jd, flags, first_seen))
         db.save_jobs([_row(company, job, emailed=True, repost=repost)])
         sent += 1
-    return sent, len(jobs), fingerprint
+    # no fingerprint so the unchanged list is looked at again
+    return sent, len(jobs), None if errored else fingerprint
 
 
 def _quietly(fn, *args, **kw):
