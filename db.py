@@ -99,7 +99,8 @@ def quiet(days=14):
 
 def failing():
     rows = http("GET", _url("company_health"), headers=_headers(),
-                params={"select": "last_error,companies(name)", "last_error": "not.is.null"}).json()
+                params={"select": "last_error,companies!inner(name)", "last_error": "not.is.null",
+                        "companies.active": "is.true"}).json()
     return [f"{r['companies']['name']}: {r['last_error'][:150]}" for r in rows]
 
 
