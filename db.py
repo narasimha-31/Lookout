@@ -88,6 +88,15 @@ def prune(keep, days=30):
     return len(doomed)
 
 
+def quiet(days=14):
+    # boards with no new job in a while have usually moved or stopped hiring
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    rows = http("GET", _url("company_activity"), headers=_headers(), params={
+        "select": "name,last_new", "added_at": f"lt.{cutoff}", "or": f"(last_new.lt.{cutoff},last_new.is.null)",
+        "order": "last_new.asc.nullsfirst"}).json()
+    return [f"{r['name']}: last new job {(r['last_new'] or 'never')[:10]}" for r in rows]
+
+
 def failing():
     rows = http("GET", _url("company_health"), headers=_headers(),
                 params={"select": "last_error,companies(name)", "last_error": "not.is.null"}).json()
