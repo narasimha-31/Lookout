@@ -28,10 +28,13 @@ def _us_marked(place, f):
 
 def _place_ok(place, f):
     # "IN-Pune", "CA-Ontario-Toronto": a leading code is a country, only US- is ours
-    m = re.match(r"\s*([A-Z]{2}) ?- ?\S", place)
+    m = re.match(r"\s*([A-Z]{3})( - |-)\S", place)
+    if m:
+        return m.group(1) == "USA"
+    m = re.match(r"\s*([A-Z]{2})( - |-)\S", place)
     if m:
         # "TX - San Angelo" is a state, "IN - Bengaluru, India" is not Indiana
-        state = m.group(1) in f["locations_allowed"] and not _matches(f["locations_blocked"], place)
+        state = m.group(2) == " - " and m.group(1) in f["locations_allowed"] and not _matches(f["locations_blocked"], place)
         return m.group(1) == "US" or state
     # "Kulim, 02 (MY)", "London (GB)": a bracketed code is a country too
     m = re.search(r"\(([A-Z]{2})\)", place)
@@ -70,6 +73,10 @@ def abroad(location, text, f):
     if not location.strip():
         return not (us or _us_marked(text, f))
     foreign = [t for t in f["locations_blocked"] if not t.startswith("(")]
+    # workday puts the full location on the first line, ", Philippines", while the body may still mention US work
+    head = text.strip().split("\n", 1)[0][:200]
+    if _matches(foreign, head) and not _us_marked(head, f):
+        return True
     return bool(_matches(foreign, text)) and not us
 
 

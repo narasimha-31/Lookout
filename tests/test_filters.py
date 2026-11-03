@@ -40,6 +40,8 @@ def test_locations():
     assert location_ok("US-TX-Remote", F)
     assert location_ok("TX - San Angelo", F)
     assert not location_ok("IN - Bengaluru, India", {**F, "locations_allowed": F["locations_allowed"] + ["IN"]})
+    assert not location_ok("MYS - Selangor - Petaling Jaya (Ascent Paradigm)", F)
+    assert location_ok("USA - Texas - Houston", F)
     assert not location_ok("Kulim, 02 (MY)", F)
     assert location_ok("Houston (US)", F)
     tn = {**F, "locations_allowed": F["locations_allowed"] + ["Tennessee", "TN"]}
@@ -95,7 +97,9 @@ def test_abroad():
     assert not abroad("Austin (Oakhill, Office)", "More information about NXP in the United States.",
                       {**F, "locations_blocked": ["Austria"]})
     assert not abroad("Houston, TX", gratkorn, {**F, "locations_blocked": ["Austria"]})
-    assert not abroad("Remote", "Work from anywhere in the US. Teams in India too.", F)
+    assert abroad("Dela Rosa - Street office", ", Philippines\nSupports US and local reporting.",
+                  {**F, "locations_blocked": ["Philippines"]})
+    assert not abroad("Remote","Work from anywhere in the US. Teams in India too.", F)
     assert abroad("", "Join our well services team in Aberdeen.", F)
     assert not abroad("", "Based at our office in Houston, TX.", F)
     assert not abroad("", "This role sits in Texas.", F)
