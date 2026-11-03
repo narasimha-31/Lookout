@@ -70,7 +70,7 @@ def count(table, **params):
     return int(r.headers.get("Content-Range", "*/0").split("/")[-1])
 
 
-def prune(keep, days=90):
+def prune(keep, days=30):
     # old unsent rows whose title can never match are safe to forget; the rest stay as history
     cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
     doomed, last = [], 0
