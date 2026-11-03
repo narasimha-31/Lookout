@@ -316,3 +316,15 @@ def test_rippling(monkeypatch):
     j = fetchers.fetch_list({"platform": "rippling", "board": "net-power-llc.rippling-ats.com"})[0]
     assert (j.id, j.title) == ("1063983", "Project Finance & Analyst")
     assert j.url == "https://net-power-llc.rippling-ats.com/job/1063983/project-finance-analyst"
+
+
+def test_selectminds(monkeypatch):
+    calls = []
+    listing = ('<p><a href="https://x.referrals.selectminds.com/ETP/jobs/data-analyst-20041" class="job_link font_bold">Data &amp; Analyst</a></p>'
+               ' <p class="jlr_location"> <a href="#" class="location"><span class="loc_icon entypo">&#128269;</span>BEAUMONT, Texas, United States</a> </p>')
+    page = '<div class="job_description"><p>2 years</p></div><div class="jBlockRegion">x'
+    monkeypatch.setattr(fetchers, "http", fake_http({"latest-jobs": Resp(text=listing), "/jobs/data-analyst-20041": Resp(text=page)}, calls))
+    c = {"platform": "selectminds", "board": "x.referrals.selectminds.com/ETP"}
+    j = fetchers.fetch_list(c)[0]
+    assert (j.id, j.title, j.location) == ("20041", "Data & Analyst", "BEAUMONT, Texas, United States")
+    assert "2 years" in fetchers.fetch_detail(c, j)
