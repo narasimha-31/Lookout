@@ -28,9 +28,11 @@ def _us_marked(place, f):
 
 def _place_ok(place, f):
     # "IN-Pune", "CA-Ontario-Toronto": a leading code is a country, only US- is ours
-    m = re.match(r"\s*([A-Z]{2})-\S", place)
+    m = re.match(r"\s*([A-Z]{2}) ?- ?\S", place)
     if m:
-        return m.group(1) == "US"
+        # "TX - San Angelo" is a state, "IN - Bengaluru, India" is not Indiana
+        state = m.group(1) in f["locations_allowed"] and not _matches(f["locations_blocked"], place)
+        return m.group(1) == "US" or state
     # "Kulim, 02 (MY)", "London (GB)": a bracketed code is a country too
     m = re.search(r"\(([A-Z]{2})\)", place)
     if m:
