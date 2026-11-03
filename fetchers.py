@@ -484,8 +484,8 @@ def _sitemap_list(c):
     return jobs
 
 
-def _sitemap_detail(c, job):
-    page = http("GET", job.url).text
+def _sitemap_detail(c, job, headers=None, params=None):
+    page = http("GET", job.url, headers=headers or {"Accept": "text/html"}, params=params).text
     for block in re.findall(r"<script[^>]*application/ld\+json[^>]*>(.*?)</script>", page, re.S):
         try:
             data = json.loads(block)
@@ -500,15 +500,39 @@ def _sitemap_detail(c, job):
     return ""
 
 
+def _icims_detail(c, job):
+    # icims turns away browser-looking clients that are not browsers
+    return _sitemap_detail(c, job, {"Accept": "text/html", "User-Agent": "lookout"}, {"in_iframe": 1})
+
+
+def _icims_list(c):
+    # classic icims portals render plain html, about 20 jobs a page
+    jobs, page = [], 0
+    while True:
+        text = http("GET", f"https://{c['board']}/jobs/search", params={"ss": 1, "in_iframe": 1, "pr": page},
+                    headers={"Accept": "text/html", "User-Agent": "lookout"}).text
+        cards = re.findall(r'<li class="iCIMS_JobCardItem">(.*?)</li>', text, re.S)
+        for card in cards:
+            link = re.search(r'href="(https://[^"]+/jobs/(\d+)/[^"]+/job)', card)
+            title = re.search(r"<h3[^>]*>(.*?)</h3>", card, re.S)
+            where = re.search(r'Job Locations</span>\s*<span[^>]*>(.*?)</span>', card, re.S)
+            if link and title:
+                jobs.append(Job(link.group(2), html.unescape(title.group(1).strip()),
+                                html.unescape(where.group(1).strip()) if where else "", link.group(1)))
+        page += 1
+        if not cards or len(jobs) >= _cap(c) or f"pr={page}" not in text:
+            return jobs
+
+
 LIST = {"greenhouse": _greenhouse_list, "lever": _lever_list, "ashby": _ashby_list, "workday": _workday_list,
         "ukg": _ukg_list, "workable": _workable_list, "oracle": _oracle_list, "smartrecruiters": _smartrecruiters_list,
         "consider": _consider_list, "getro": _getro_list, "jibe": _jibe_list, "eightfold": _eightfold_list,
-        "rss": _rss_list, "amazon": _amazon_list, "phenom": _phenom_list, "sfxml": _sfxml_list, "bamboohr": _bamboohr_list, "sitemap": _sitemap_list}
+        "rss": _rss_list, "amazon": _amazon_list, "phenom": _phenom_list, "sfxml": _sfxml_list, "bamboohr": _bamboohr_list, "sitemap": _sitemap_list, "icims": _icims_list}
 DETAIL = {"greenhouse": _greenhouse_detail, "lever": _lever_detail, "ashby": _ashby_detail, "workday": _workday_detail,
           "ukg": _ukg_detail, "workable": _workable_detail, "oracle": _oracle_detail,
           "smartrecruiters": _smartrecruiters_detail, "consider": _consider_detail, "getro": _getro_detail,
           "jibe": _jibe_detail, "eightfold": _eightfold_detail, "rss": _rss_detail,
-          "amazon": _amazon_detail, "phenom": _phenom_detail, "sfxml": _rss_detail, "bamboohr": _bamboohr_detail, "sitemap": _sitemap_detail}
+          "amazon": _amazon_detail, "phenom": _phenom_detail, "sfxml": _rss_detail, "bamboohr": _bamboohr_detail, "sitemap": _sitemap_detail, "icims": _icims_detail}
 
 
 def fetch_list(company, newest=None):

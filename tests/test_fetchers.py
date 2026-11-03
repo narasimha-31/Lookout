@@ -295,3 +295,15 @@ def test_sitemap(monkeypatch):
     j = jobs[0]
     assert fetchers.fetch_detail(c, j) == "<p>2 years</p>"
     assert (j.title, j.location) == ("Data Analyst", "Austin, Texas")
+
+
+def test_icims(monkeypatch):
+    calls = []
+    card = ('<li class="iCIMS_JobCardItem"><span class="sr-only field-label">Job Locations</span> <span > US-TX-Houston</span>'
+            '<a href="https://careers-x.icims.com/jobs/3483/energy-risk-analyst/job?in_iframe=1"><h3 > Energy Risk &amp; Analyst</h3></a></li>')
+    pages = {0: f"{card} <a href='?pr=1'>2</a>", 1: ""}
+    monkeypatch.setattr(fetchers, "http", fake_http({"/jobs/search": lambda kw: Resp(text=pages[kw["params"]["pr"]])}, calls))
+    j = fetchers.fetch_list({"platform": "icims", "board": "careers-x.icims.com"})[0]
+    assert (j.id, j.title, j.location) == ("3483", "Energy Risk & Analyst", "US-TX-Houston")
+    assert j.url == "https://careers-x.icims.com/jobs/3483/energy-risk-analyst/job"
+    assert len(calls) == 2
