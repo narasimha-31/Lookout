@@ -3,9 +3,9 @@ from filters import (abroad, dealbreakers, html_to_text, location_ok, years_requ
 
 F = {
     "title_include": ["data", "analytics", "bi", "business intelligence", "finance", "financial", "fp&a", "supply chain",
-                      "planning", "demand", "procurement", "marketing", "investment", "product", "business", "operations"],
+                      "planning", "demand", "procurement", "marketing", "investment", "product", "business", "operations", "audit"],
     "title_exclude": ["senior", "sr", "lead", "manager", "data center", "data entry", "helpdesk", "pqa", "scientist",
-                      "cybersecurity", "benefits", "product support"],
+                      "cybersecurity", "benefits"],
     "dealbreakers": ["unable to sponsor", "no sponsorship", "security clearance"],
     "locations_allowed": ["United States", "USA", "US", "Texas", "TX", "CA"],
     "locations_blocked": ["Canada", "India", "(DE)", "(CA)"],
@@ -19,11 +19,12 @@ def test_titles():
             "Export & Agency Finance (EAF US) - LatAm Focus - Analyst", "BI Developer", "Data Analytics Intern",
             "Product Associate, Data & Analytics-Payments", "Engineer, Data Platform", "Financial Planning and Analysis",
             "Strategic Analytics [Multiple Positions Available]", "Buyer - Procurement Planning",
-            "Clinical Data / Reporting Analyst"]
+            "Clinical Data / Reporting Analyst", "Product Support Analyst",
+            "Analyst, Client Audit and Performance"]
     bad = ["Senior Data Analyst", "Sr. Analyst", "Analyst Manager", "Leadership Coordinator",
            "Data Center Critical Infrastructure Engineer", "Modem System Test Engineer -  6G/5G Data and Networking",
            "Administrative Support Representative/Data Entry Operator", "PQA Analyst", "Helpdesk Analyst", "Data Scientist",
-           "Cybersecurity Analyst I", "Benefits Support Analyst, Missed Enrollments (US)", "Product Support Analyst",
+           "Cybersecurity Analyst I", "Benefits Support Analyst, Missed Enrollments (US)",
            "Laboratory Informatics Master Data Assistant", "AI Engineer", "Managing SAP Consultant Basis",
            "Software Engineer", "Data Center Asset Management, Commercial Associate"]
     for t in good:
