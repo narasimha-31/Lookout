@@ -20,12 +20,12 @@ def test_titles():
             "Product Associate, Data & Analytics-Payments", "Engineer, Data Platform", "Financial Planning and Analysis",
             "Strategic Analytics [Multiple Positions Available]", "Buyer - Procurement Planning",
             "Clinical Data / Reporting Analyst", "Product Support Analyst",
-            "Analyst, Client Audit and Performance"]
+            "Analyst, Client Audit and Performance", "AI/ML Engineer", "AI Engineer", "Generative AI Developer"]
     bad = ["Senior Data Analyst", "Sr. Analyst", "Analyst Manager", "Leadership Coordinator",
            "Data Center Critical Infrastructure Engineer", "Modem System Test Engineer -  6G/5G Data and Networking",
            "Administrative Support Representative/Data Entry Operator", "PQA Analyst", "Helpdesk Analyst", "Data Scientist",
            "Cybersecurity Analyst I", "Benefits Support Analyst, Missed Enrollments (US)",
-           "Laboratory Informatics Master Data Assistant", "AI Engineer", "Managing SAP Consultant Basis",
+           "Laboratory Informatics Master Data Assistant", "Modem Machine Learning Engineer", "Managing SAP Consultant Basis",
            "Software Engineer", "Data Center Asset Management, Commercial Associate"]
     for t in good:
         assert title_ok(t, F), t

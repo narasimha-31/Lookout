@@ -19,6 +19,8 @@ ROLES = ["analyst", "engineer", "developer", "specialist", "associate", "planner
 BUILDERS = ["engineer", "developer"]
 DATA_DOMAINS = ["data", "analytics", "bi", "business intelligence", "etl", "sql", "reporting", "power bi", "tableau",
                 "database", "data warehouse", "visualization", "gis"]
+# applied ai work like llm apps, rag and agents, not machine learning research
+AI_DOMAINS = ["ai", "genai", "gen ai", "generative ai", "llm", "llms", "rag", "agentic", "artificial intelligence"]
 # associates, specialists and interns are too broad for words like operations or product
 CORE_DOMAINS = DATA_DOMAINS + ["fp&a", "finance", "financial", "supply chain", "demand", "procurement", "sourcing",
                                "pricing", "information systems", "s&op", "insights"]
@@ -44,7 +46,7 @@ def _roles(title, f):
         alone = LEVEL.sub("", part).strip(" .").lower() in roles
         for role in roles:
             if role in BUILDERS:
-                yield role, any(_matches(DATA_DOMAINS, p) for p in (parts if alone else [part]))
+                yield role, any(_matches(DATA_DOMAINS + AI_DOMAINS, p) for p in (parts if alone else [part]))
             else:
                 yield role, bool(_matches(f["title_include"] if role in ("analyst", "planner") else CORE_DOMAINS, title))
 
