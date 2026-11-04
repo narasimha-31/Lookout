@@ -202,3 +202,13 @@ def test_senior_titles_need_a_low_years_ask(world):
     f = {**F, "title_exclude": []}
     assert main.check(company(), f)[0] == 1
     assert world["sent"] == ["New role at Acme: Senior Data Analyst, Houston, TX"]
+
+
+def test_weekly_audit_ignores_jobs_outside_the_us(world, monkeypatch):
+    paused = []
+    monkeypatch.setattr(main.db, "pause", lambda cid, note: paused.append(cid))
+    monkeypatch.setattr(main.db, "companies", lambda: [company(1)])
+    world["jobs"] = [job(i, loc="") for i in range(1, 6)]
+    world["jd"] = {str(i): "<p>Based in Bengaluru, India. No sponsorship for this role.</p>" for i in range(1, 6)}
+    main.audit()
+    assert paused == []

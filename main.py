@@ -159,7 +159,8 @@ def _audit_one(c, f):
         if read == AUDIT_JDS:
             break
         text = flt.html_to_text(fetchers.fetch_detail(c, job))
-        if not (flt.title_ok(job.title, f) or flt.skills_ok(text)):
+        # only us jobs count, some boards list no location so the description has to say
+        if not (flt.title_ok(job.title, f) or flt.skills_ok(text)) or flt.abroad(job.location, text, f):
             continue
         read += 1
         hits += flt.dealbreakers(text, f)[:1]
