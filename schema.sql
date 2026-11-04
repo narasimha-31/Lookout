@@ -11,7 +11,9 @@ create table companies (
   first_run_done boolean not null default false,
   added_at timestamptz not null default now(),
   -- why a company is switched off
-  note text
+  note text,
+  -- share of its h-1b filings in engineering and data roles, from labor department data
+  sponsor_mix int
 );
 -- a board can only be added once, so blocked companies are caught on re-add
 create unique index companies_board_unique on companies (lower(board), lower(coalesce(site, '')));
