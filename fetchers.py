@@ -625,6 +625,25 @@ def _taleo_detail(c, job):
     return max(fields, key=len).replace("!*!", "").replace("\\:", ":")
 
 
+NOT_JOBS = re.compile(r"view all|see all|more jobs|unsubscribe|manage|preferences|privacy|apply now|sign in|log in|search jobs|edit alert", re.I)
+
+
+def _email_list(c):
+    # board is a gmail search for the company's job alert emails, e.g. from:tesla.com
+    import mail
+    jobs = {}
+    for body in mail.alerts(c["board"]):
+        for href, inner in re.findall(r'<a[^>]+href="([^"]+)"[^>]*>(.*?)</a>', body, re.S):
+            title = " ".join(html.unescape(re.sub(r"<[^>]+>", " ", inner)).split())
+            if not 3 <= len(title) <= 120 or NOT_JOBS.search(title) or not re.search(r"job|career|posting|req", href, re.I):
+                continue
+            # tracking links change per email, the requisition number does not
+            num = re.findall(r"\d{5,}", unquote(html.unescape(href)))
+            jid = num[-1] if num else title.lower()
+            jobs.setdefault(jid, Job(jid, title, "", html.unescape(href)))
+    return list(jobs.values())
+
+
 def _avature_list(c):
     # board is host plus locale, e.g. insperity.avature.net/en_US
     jobs, seen = [], set()
@@ -679,13 +698,13 @@ LIST = {"greenhouse": _greenhouse_list, "lever": _lever_list, "ashby": _ashby_li
         "ukg": _ukg_list, "workable": _workable_list, "oracle": _oracle_list, "smartrecruiters": _smartrecruiters_list,
         "consider": _consider_list, "getro": _getro_list, "jibe": _jibe_list, "eightfold": _eightfold_list,
         "rss": _rss_list, "amazon": _amazon_list, "phenom": _phenom_list, "sfxml": _sfxml_list, "bamboohr": _bamboohr_list, "sitemap": _sitemap_list, "icims": _icims_list, "rippling": _rippling_list, "selectminds": _selectminds_list,
-        "paylocity": _paylocity_list, "recruitee": _recruitee_list, "jazzhr": _jazzhr_list, "avature": _avature_list, "taleo": _taleo_list}
+        "paylocity": _paylocity_list, "recruitee": _recruitee_list, "jazzhr": _jazzhr_list, "avature": _avature_list, "taleo": _taleo_list, "email": _email_list}
 DETAIL = {"greenhouse": _greenhouse_detail, "lever": _lever_detail, "ashby": _ashby_detail, "workday": _workday_detail,
           "ukg": _ukg_detail, "workable": _workable_detail, "oracle": _oracle_detail,
           "smartrecruiters": _smartrecruiters_detail, "consider": _consider_detail, "getro": _getro_detail,
           "jibe": _jibe_detail, "eightfold": _eightfold_detail, "rss": _rss_detail,
           "amazon": _amazon_detail, "phenom": _phenom_detail, "sfxml": _sfxml_detail, "bamboohr": _bamboohr_detail, "sitemap": _sitemap_detail, "icims": _icims_detail, "rippling": _sitemap_detail, "selectminds": _selectminds_detail,
-          "paylocity": _sitemap_detail, "recruitee": _rss_detail, "jazzhr": _sitemap_detail, "avature": _avature_detail, "taleo": _taleo_detail}
+          "paylocity": _sitemap_detail, "recruitee": _rss_detail, "jazzhr": _sitemap_detail, "avature": _avature_detail, "taleo": _taleo_detail, "email": lambda c, job: ""}
 
 
 def fetch_list(company, newest=None):

@@ -1,6 +1,7 @@
 import json
 
 import fetchers
+import mail
 from fetchers import Job
 
 
@@ -419,3 +420,14 @@ def test_sfxml_fills_template_fields_from_the_posting(monkeypatch):
     assert fetchers.fetch_detail({"platform": "sfxml"}, job) == "<p>Pay $57,980 - $75,411</p></div>"
     plain = Job("2", "Analyst", "", "u", {"description": "<p>Pay $50,000</p>"})
     assert fetchers.fetch_detail({"platform": "sfxml"}, plain) == "<p>Pay $50,000</p>"
+
+
+def test_email_alerts_split_into_roles(monkeypatch):
+    body = ('<a href="https://t.co/click?u=https%3A%2F%2Fwww.tesla.com%2Fcareers%2Fsearch%2Fjob%2Fdata-analyst-251234">Data Analyst, Supply Chain</a>'
+            '<a href="https://www.tesla.com/careers/search/job/sr-engineer-251999"><b>Senior Engineer</b></a>'
+            '<a href="https://www.tesla.com/careers/search">View all jobs</a><a href="https://www.tesla.com/unsubscribe">Unsubscribe</a>')
+    again = '<a href="https://t.co/other?u=https%3A%2F%2Fwww.tesla.com%2Fcareers%2Fsearch%2Fjob%2Fdata-analyst-251234">Data Analyst, Supply Chain</a>'
+    monkeypatch.setattr(mail, "alerts", lambda q: [body, again])
+    jobs = fetchers.fetch_list({"platform": "email", "board": "from:tesla.com"})
+    assert [(j.id, j.title) for j in jobs] == [("251234", "Data Analyst, Supply Chain"), ("251999", "Senior Engineer")]
+    assert fetchers.fetch_detail({"platform": "email"}, jobs[0]) == ""

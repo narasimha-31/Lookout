@@ -53,3 +53,22 @@ def send(msg):
     with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=30) as s:
         s.login(os.environ["GMAIL_USER"], os.environ["GMAIL_APP_PASSWORD"])
         s.send_message(msg)
+
+
+def alerts(query, days=14):
+    """Html bodies of recent emails matching a Gmail search, e.g. from:tesla.com."""
+    import email
+    import imaplib
+    with imaplib.IMAP4_SSL("imap.gmail.com") as box:
+        box.login(os.environ["GMAIL_USER"], os.environ["GMAIL_APP_PASSWORD"])
+        # all mail, so a filter can keep the alerts out of the inbox
+        box.select('"[Gmail]/All Mail"', readonly=True)
+        _, ids = box.search(None, "X-GM-RAW", f'"{query} newer_than:{days}d"')
+        bodies = []
+        for i in ids[0].split():
+            _, data = box.fetch(i, "(RFC822)")
+            msg = email.message_from_bytes(data[0][1])
+            for part in msg.walk():
+                if part.get_content_type() == "text/html":
+                    bodies.append(part.get_payload(decode=True).decode(part.get_content_charset() or "utf-8", "ignore"))
+        return bodies
