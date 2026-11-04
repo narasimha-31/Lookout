@@ -387,3 +387,17 @@ def test_avature_pages_until_nothing_new(monkeypatch):
     detail = '<div class="x tf_replaceFieldVideoTokens"><p>SQL, 2 years</p></div><div class="article__content"><a>Apply</a>'
     monkeypatch.setattr(fetchers, "http", lambda *a, **kw: Resp(text=detail))
     assert fetchers.fetch_detail({"platform": "avature"}, jobs[0]) == "<p>SQL, 2 years</p></div>"
+
+
+def test_taleo(monkeypatch):
+    calls = []
+    page = {"requisitionList": [{"contestNo": "197703", "column": ["Data Analyst", '["United States-Texas-Houston"]', "Nov 4, 2026"]}],
+            "pagingData": {"totalCount": 1}}
+    monkeypatch.setattr(fetchers, "http", fake_http({"searchjobs": Resp(page)}, calls))
+    c = {"platform": "taleo", "board": "hdr.taleo.net/ex/101430233"}
+    j = fetchers.fetch_list(c)[0]
+    assert (j.id, j.title, j.location) == ("197703", "Data Analyst", "United States, Texas, Houston")
+    assert calls[0][2]["params"]["portal"] == "101430233" and j.url.endswith("/careersection/ex/jobdetail.ftl?job=197703&lang=en")
+    state = 'ftlx0!|!short!|!!*!&lt;p&gt;SQL%5C: 2 years&lt;/p&gt;!|!x'
+    monkeypatch.setattr(fetchers, "http", fake_http({"jobdetail": Resp(text=f'<input id="initialHistory" value="{state}">')}, calls))
+    assert fetchers.fetch_detail(c, j) == "<p>SQL: 2 years</p>"

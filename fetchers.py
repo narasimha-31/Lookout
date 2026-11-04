@@ -571,6 +571,42 @@ def _paylocity_list(c):
                 f"https://recruiting.paylocity.com/Recruiting/Jobs/Details/{p['JobId']}", p) for p in posts]
 
 
+def _taleo_list(c):
+    # board is host/career section/portal, e.g. hdr.taleo.net/ex/101430233
+    host, section, portal = c["board"].split("/")
+    jobs, page = [], 1
+    while len(jobs) < _cap(c):
+        body = {"multilineEnabled": False, "sortingSelection": {"sortBySelectionParam": "3", "ascendingSortingOrder": "false"},
+                "fieldData": {"fields": {"KEYWORD": "", "LOCATION": ""}, "valid": True},
+                "filterSelectionParam": {"searchFilterSelections": []},
+                "advancedSearchFiltersSelectionParam": {"searchFilterSelections": []}, "pageNo": page}
+        data = http("POST", f"https://{host}/careersection/rest/jobboard/searchjobs", params={"lang": "en", "portal": portal},
+                    json=body, headers={"tz": "GMT-06:00"}).json()
+        posts = data.get("requisitionList") or []
+        for p in posts:
+            cols = p.get("column") or []
+            try:
+                where = "; ".join(json.loads(cols[1])) if len(cols) > 1 else ""
+            except ValueError:
+                where = cols[1]
+            jobs.append(Job(p["contestNo"], cols[0] if cols else "", where.replace("-", ", "),
+                            f"https://{host}/careersection/{section}/jobdetail.ftl?job={p['contestNo']}&lang=en"))
+        if not posts or len(jobs) >= (data.get("pagingData") or {}).get("totalCount", 0):
+            return jobs
+        page += 1
+    return jobs
+
+
+def _taleo_detail(c, job):
+    page = http("GET", job.url, headers={"Accept": "text/html"}).text
+    found = re.search(r'id="initialHistory"[^>]*value="([^"]*)"', page)
+    if not found:
+        return ""
+    # the page state is one escaped string of fields, the description is the long html one
+    fields = unquote(html.unescape(found[1])).split("!|!")
+    return max(fields, key=len).replace("!*!", "").replace("\\:", ":")
+
+
 def _avature_list(c):
     # board is host plus locale, e.g. insperity.avature.net/en_US
     jobs, seen = [], set()
@@ -625,13 +661,13 @@ LIST = {"greenhouse": _greenhouse_list, "lever": _lever_list, "ashby": _ashby_li
         "ukg": _ukg_list, "workable": _workable_list, "oracle": _oracle_list, "smartrecruiters": _smartrecruiters_list,
         "consider": _consider_list, "getro": _getro_list, "jibe": _jibe_list, "eightfold": _eightfold_list,
         "rss": _rss_list, "amazon": _amazon_list, "phenom": _phenom_list, "sfxml": _sfxml_list, "bamboohr": _bamboohr_list, "sitemap": _sitemap_list, "icims": _icims_list, "rippling": _rippling_list, "selectminds": _selectminds_list,
-        "paylocity": _paylocity_list, "recruitee": _recruitee_list, "jazzhr": _jazzhr_list, "avature": _avature_list}
+        "paylocity": _paylocity_list, "recruitee": _recruitee_list, "jazzhr": _jazzhr_list, "avature": _avature_list, "taleo": _taleo_list}
 DETAIL = {"greenhouse": _greenhouse_detail, "lever": _lever_detail, "ashby": _ashby_detail, "workday": _workday_detail,
           "ukg": _ukg_detail, "workable": _workable_detail, "oracle": _oracle_detail,
           "smartrecruiters": _smartrecruiters_detail, "consider": _consider_detail, "getro": _getro_detail,
           "jibe": _jibe_detail, "eightfold": _eightfold_detail, "rss": _rss_detail,
           "amazon": _amazon_detail, "phenom": _phenom_detail, "sfxml": _rss_detail, "bamboohr": _bamboohr_detail, "sitemap": _sitemap_detail, "icims": _icims_detail, "rippling": _sitemap_detail, "selectminds": _selectminds_detail,
-          "paylocity": _sitemap_detail, "recruitee": _rss_detail, "jazzhr": _sitemap_detail, "avature": _avature_detail}
+          "paylocity": _sitemap_detail, "recruitee": _rss_detail, "jazzhr": _sitemap_detail, "avature": _avature_detail, "taleo": _taleo_detail}
 
 
 def fetch_list(company, newest=None):
