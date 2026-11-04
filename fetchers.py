@@ -92,6 +92,8 @@ def _workday_list(c):
     host, base = _workday_base(c)
     o = c.get("overrides") or {}
     jobs = {}
+    # wd12.myworkdaysite.com boards put the tenant in the job page path
+    page = f"recruiting/{c['board'].split('/', 1)[1]}/" if "myworkdaysite" in host else ""
     # huge boards get searched on workday's side, one term at a time
     for term in _terms(c):
         offset, total = 0, 0
@@ -106,7 +108,7 @@ def _workday_list(c):
             for p in posts:
                 if p.get("externalPath"):
                     jobs[p["externalPath"]] = Job(p["externalPath"], p.get("title", ""), p.get("locationsText", ""),
-                                                  f"https://{host}/{c['site']}{p['externalPath']}", p)
+                                                  f"https://{host}/{page}{c['site']}{p['externalPath']}", p)
             offset += 20
             if not posts or offset >= total or len(jobs) >= _cap(c):
                 break
