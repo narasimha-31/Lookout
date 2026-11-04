@@ -304,6 +304,9 @@ def test_sitemap(monkeypatch):
     j = fetchers.fetch_list({"platform": "sitemap", "board": "z.com/sitemap.xml"})[0]
     assert j.title == "Planner, Supply Chain"
     assert fetchers.fetch_detail({"platform": "sitemap"}, j) == "<p>SQL</p><div>2 years</div></span></span>"
+    te = '<span itemprop="description" class="x"><p>Excel</p></span><span itemprop="description"><p>1 year</p></span><style>a{}</style>'
+    monkeypatch.setattr(fetchers, "http", fake_http({"/job/": Resp(text=te)}, calls))
+    assert fetchers.fetch_detail({"platform": "sitemap"}, j) == '<p>Excel</p></span><span itemprop="description"><p>1 year</p>'
 
 
 def test_icims(monkeypatch):

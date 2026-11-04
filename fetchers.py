@@ -504,11 +504,12 @@ def _sitemap_detail(c, job, headers=None, params=None):
                 job.location = ", ".join(x for x in (place.get("addressLocality"), place.get("addressRegion")) if x) or job.location
                 return html.unescape(item.get("description") or "")
     # successfactors career sites only have it in the page
-    start = page.find('class="jobdescription">')
-    if start < 0:
+    found = re.search(r'class="jobdescription"[^>]*>|itemprop="description"[^>]*>', page)
+    if not found:
         return ""
-    end = min(k for k in (page.find("applylink", start), page.find("<script", start), len(page)) if k > 0)
-    return page[start + 23:page.rfind("<", start, end)]
+    start = found.end()
+    end = min(k for k in (page.find("applylink", start), page.find("<script", start), page.find("<style", start), len(page)) if k > 0)
+    return page[start:page.rfind("<", start, end)]
 
 
 def _icims_detail(c, job):
