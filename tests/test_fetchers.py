@@ -431,3 +431,11 @@ def test_email_alerts_split_into_roles(monkeypatch):
     jobs = fetchers.fetch_list({"platform": "email", "board": "from:tesla.com"})
     assert [(j.id, j.title) for j in jobs] == [("251234", "Data Analyst, Supply Chain"), ("251999", "Senior Engineer")]
     assert fetchers.fetch_detail({"platform": "email"}, jobs[0]) == ""
+
+
+def test_inbox_jobs_from_the_browser_button(monkeypatch):
+    import db
+    monkeypatch.setattr(db, "inbox", lambda cid: [{"id": "280882", "t": "Supply Chain Data Analyst", "w": "Palo Alto, CA"}, {"t": "no id"}])
+    jobs = fetchers.fetch_list({"platform": "inbox", "id": 7, "board": "tesla.com/careers"})
+    assert [(j.id, j.title, j.location, j.url) for j in jobs] == [
+        ("280882", "Supply Chain Data Analyst", "Palo Alto, CA", "https://www.tesla.com/careers/search/job/supply-chain-data-analyst-280882")]

@@ -50,7 +50,16 @@ create table company_health (
   ids_hash text
 );
 
+-- job lists sent by a browser button for sites that block automated visits
+create table inbox (
+  id bigint generated always as identity primary key,
+  company_id bigint not null references companies on delete cascade,
+  jobs jsonb not null,
+  received_at timestamptz not null default now()
+);
+
 alter table companies enable row level security;
+alter table inbox enable row level security;
 alter table seen_jobs enable row level security;
 alter table filters enable row level security;
 alter table company_health enable row level security;

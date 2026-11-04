@@ -117,3 +117,13 @@ def save_health(rows):
     # one request for every company keeps supabase's request logs small
     if rows:
         http("POST", _url("company_health"), headers=_headers("resolution=merge-duplicates,return=minimal"), json=rows)
+
+
+def inbox(company_id):
+    """Newest job list sent by the browser button, older ones are dropped."""
+    rows = http("GET", _url("inbox"), headers=_headers(), params={
+        "company_id": f"eq.{company_id}", "order": "received_at.desc", "limit": 1, "select": "id,jobs"}).json()
+    if not rows:
+        return []
+    http("DELETE", _url("inbox"), headers=_headers(), params={"company_id": f"eq.{company_id}", "id": f"lt.{rows[0]['id']}"})
+    return rows[0]["jobs"]

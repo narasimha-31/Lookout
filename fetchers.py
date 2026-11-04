@@ -644,6 +644,14 @@ def _email_list(c):
     return list(jobs.values())
 
 
+def _inbox_list(c):
+    # tesla blocks automated visits, so a button in the user's own browser sends the list
+    import db
+    slug = lambda t: re.sub(r"[^a-z0-9]+", "-", t.lower()).strip("-")
+    return [Job(str(j["id"]), j["t"], j.get("w") or "", f"https://www.tesla.com/careers/search/job/{slug(j['t'])}-{j['id']}")
+            for j in db.inbox(c["id"]) if j.get("id") and j.get("t")]
+
+
 def _avature_list(c):
     # board is host plus locale, e.g. insperity.avature.net/en_US
     jobs, seen = [], set()
@@ -698,13 +706,13 @@ LIST = {"greenhouse": _greenhouse_list, "lever": _lever_list, "ashby": _ashby_li
         "ukg": _ukg_list, "workable": _workable_list, "oracle": _oracle_list, "smartrecruiters": _smartrecruiters_list,
         "consider": _consider_list, "getro": _getro_list, "jibe": _jibe_list, "eightfold": _eightfold_list,
         "rss": _rss_list, "amazon": _amazon_list, "phenom": _phenom_list, "sfxml": _sfxml_list, "bamboohr": _bamboohr_list, "sitemap": _sitemap_list, "icims": _icims_list, "rippling": _rippling_list, "selectminds": _selectminds_list,
-        "paylocity": _paylocity_list, "recruitee": _recruitee_list, "jazzhr": _jazzhr_list, "avature": _avature_list, "taleo": _taleo_list, "email": _email_list}
+        "paylocity": _paylocity_list, "recruitee": _recruitee_list, "jazzhr": _jazzhr_list, "avature": _avature_list, "taleo": _taleo_list, "email": _email_list, "inbox": _inbox_list}
 DETAIL = {"greenhouse": _greenhouse_detail, "lever": _lever_detail, "ashby": _ashby_detail, "workday": _workday_detail,
           "ukg": _ukg_detail, "workable": _workable_detail, "oracle": _oracle_detail,
           "smartrecruiters": _smartrecruiters_detail, "consider": _consider_detail, "getro": _getro_detail,
           "jibe": _jibe_detail, "eightfold": _eightfold_detail, "rss": _rss_detail,
           "amazon": _amazon_detail, "phenom": _phenom_detail, "sfxml": _sfxml_detail, "bamboohr": _bamboohr_detail, "sitemap": _sitemap_detail, "icims": _icims_detail, "rippling": _sitemap_detail, "selectminds": _selectminds_detail,
-          "paylocity": _sitemap_detail, "recruitee": _rss_detail, "jazzhr": _sitemap_detail, "avature": _avature_detail, "taleo": _taleo_detail, "email": lambda c, job: ""}
+          "paylocity": _sitemap_detail, "recruitee": _rss_detail, "jazzhr": _sitemap_detail, "avature": _avature_detail, "taleo": _taleo_detail, "email": lambda c, job: "", "inbox": lambda c, job: ""}
 
 
 def fetch_list(company, newest=None):
