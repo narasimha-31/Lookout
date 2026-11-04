@@ -13,7 +13,7 @@ def _matches(terms, text, flags=re.I):
     return [t for t in terms if re.search(r"(?<!\w)" + re.escape(t) + r"(?!\w)", text, flags)]
 
 
-ROLES = ["analyst", "engineer", "developer", "specialist", "associate", "planner", "coordinator", "buyer", "intern",
+ROLES = ["analyst", "engineer", "developer", "specialist", "associate", "planner", "coordinator", "buyer", "steward", "intern",
          "internship", "co-op"]
 # engineers and developers only count for data work, not "Data Center Engineer" style titles
 BUILDERS = ["engineer", "developer"]
@@ -49,6 +49,11 @@ def _roles(title, f):
                 yield role, any(_matches(DATA_DOMAINS + AI_DOMAINS, p) for p in (parts if alone else [part]))
             else:
                 yield role, bool(_matches(f["title_include"] if role in ("analyst", "planner") else CORE_DOMAINS, title))
+
+
+def senior(title):
+    # senior titles still count when the description asks for 3 years or less
+    return bool(re.search(r"\b(senior|sr)\b", title, re.I))
 
 
 def title_ok(title, f):

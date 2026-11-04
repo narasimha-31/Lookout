@@ -68,7 +68,7 @@ def check(company, f, before=None):
         # an analyst title we don't know needs one of the resume skills in the description
         unsure = not flt.title_ok(job.title, f) and not flt.skills_ok(text)
         if (unsure or flt.dealbreakers(text, f) or flt.student_only(job.title, text) or flt.abroad(job.location, text, f)
-                or (years is not None and years > 3)):
+                or (years is not None and years > 3) or (flt.senior(job.title) and years is None)):
             db.save_jobs([_row(company, job)])
             continue
         repost = db.is_repost(company["id"], job.title, job.location)

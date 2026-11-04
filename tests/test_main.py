@@ -194,3 +194,11 @@ def test_broken_posting_does_not_block_others(world, monkeypatch):
     assert [r["external_job_id"] for r in world["saved"]] == ["2"]
     monkeypatch.setattr(main.fetchers, "fetch_detail", real)
     assert main.check(company(), F, {"ids_hash": fingerprint})[0] == 1
+
+
+def test_senior_titles_need_a_low_years_ask(world):
+    world["jobs"] = [job(1, "Senior Data Analyst"), job(2, "Sr. Data Analyst"), job(3, "Senior Data Analyst II")]
+    world["jd"] = {"1": "<p>2-3 years of experience</p>", "2": "<p>5+ years of experience</p>", "3": "<p>Great team</p>"}
+    f = {**F, "title_exclude": []}
+    assert main.check(company(), f)[0] == 1
+    assert world["sent"] == ["New role at Acme: Senior Data Analyst, Houston, TX"]
