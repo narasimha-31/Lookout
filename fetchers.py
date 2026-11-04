@@ -3,6 +3,7 @@ import json
 import re
 import time
 from dataclasses import dataclass, field
+from urllib.parse import unquote
 
 import requests
 
@@ -485,7 +486,7 @@ def _sitemap_list(c):
     for url, _ in urls[:int(min(_cap(c), len(urls)))]:
         # the title is the last part with letters, ".../job/plymouth/data-analyst/34088/1027..." included
         slug = next((p for p in reversed(url.rstrip("/").split("/")) if re.search(r"[a-z]", p, re.I)), "")
-        jobs.append(Job(url, re.sub(r"^\d+-", "", slug).replace("-", " "), "", url))
+        jobs.append(Job(url, unquote(re.sub(r"^\d+-", "", slug)).replace("-", " "), "", url))
     return jobs
 
 
@@ -502,7 +503,12 @@ def _sitemap_detail(c, job, headers=None, params=None):
                 job.title = html.unescape(html.unescape(item.get("title") or job.title))
                 job.location = ", ".join(x for x in (place.get("addressLocality"), place.get("addressRegion")) if x) or job.location
                 return html.unescape(item.get("description") or "")
-    return ""
+    # successfactors career sites only have it in the page
+    start = page.find('class="jobdescription">')
+    if start < 0:
+        return ""
+    end = min(k for k in (page.find("applylink", start), page.find("<script", start), len(page)) if k > 0)
+    return page[start + 23:page.rfind("<", start, end)]
 
 
 def _icims_detail(c, job):
