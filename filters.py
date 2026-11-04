@@ -26,10 +26,9 @@ CORE_DOMAINS = DATA_DOMAINS + ["supply chain", "demand", "procurement", "sourcin
                                "pricing", "information systems", "s&op", "insights"]
 WORK = ["business intelligence", "analytics",
         "data analysis", "data engineering"]
-# from the resume, one is enough since years and sponsorship still decide
-SKILLS = ["sql", "excel", "python", "power bi", "power query", "dax", "tableau", "looker", "snowflake", "etl", "dashboards?",
-          "data analysis", "pivot tables?", "xlookup", "vlookup", "pandas", "postgresql", "sql server", "bigquery", "airflow",
-          "dbt", "kafka", "sap", "s/4hana", "smartsheet", "jira", "gis", "qgis", "postgis", "databricks"]
+# real data tools from the resume, excel or sap alone is clerical work
+SKILLS = ["sql", "python", "power bi", "power query", "dax", "tableau", "looker", "snowflake", "etl", "pandas", "postgresql",
+          "sql server", "bigquery", "airflow", "dbt", "kafka", "qgis", "postgis", "arcgis", "databricks"]
 TERRITORIES = re.compile(r"puerto rico|guam|virgin islands|american samoa|mariana islands|\bPR\b(?=,? (US|USA|United States)\b|$)", re.I)
 PARTS = re.compile(r"\s[-–—|/]\s|[,()|:–—]")
 LEVEL = re.compile(r"\b([ivx]+|\d+|jr\.?|junior|entry[- ]level|level \w+)\b", re.I)
