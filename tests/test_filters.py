@@ -92,6 +92,8 @@ def test_locations():
 def test_dealbreakers():
     blocked = [
         "We are UNABLE TO SPONSOR visas",
+        "U.S. work authorization sponsorship (H-1B, TN, J, etc.) is offered exclusively for Principal-level roles and above.",
+        "Roles below the Principal level require candidates to possess unrestricted U.S. work authorization at the time of hire.",
         "Candidates must be eligible to work in the United States without sponsorship.",
         "Sponsorship for this role is not being offered at this time.",
         "We cannot sponsor visas for this position.",

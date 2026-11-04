@@ -183,6 +183,9 @@ def dealbreakers(text, f):
         example = not re.search(r"sponsor", s, re.I) and re.search(r"\be\.?g\b|for example", s, re.I)
         if not hit and VISA.search(s) and NEGATIVE.search(s) and not example:
             hit = "no sponsorship"
+        # "sponsorship is offered exclusively for principal roles", "require unrestricted work authorization"
+        if not hit and re.search(r"unrestricted (u\.?s\.? |us )?work authori|sponsor\w* .*\b(exclusively|only) (for|to) (principal|director|senior)", s, re.I):
+            hit = "no sponsorship"
         if not hit and CITIZEN.search(s) and REQUIRED.search(s):
             hit = "citizenship or green card required"
         if not hit and CLEARANCE.search(s) and not no_clearance:
