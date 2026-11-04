@@ -555,15 +555,45 @@ def _selectminds_detail(c, job):
     return page[start:page.find("jBlockRegion", start)] if start >= 0 else ""
 
 
+def _paylocity_list(c):
+    # board is the guid/name part of recruiting.paylocity.com/recruiting/jobs/All/<guid>/<name>
+    page = http("GET", f"https://recruiting.paylocity.com/recruiting/jobs/All/{c['board']}", headers={"Accept": "text/html"}).text
+    data = json.loads(re.search(r"window\.pageData\s*=\s*(\{.*?\});\s*\n", page, re.S).group(1))
+    where = lambda p: ", ".join(x for x in (p.get("City"), p.get("State"), p.get("Country")) if x)
+    posts = sorted(data.get("Jobs") or [], key=lambda p: p.get("PublishedDate") or "", reverse=True)
+    return [Job(str(p["JobId"]), p["JobTitle"], where(p.get("JobLocation") or {}) or p.get("LocationName") or "",
+                f"https://recruiting.paylocity.com/Recruiting/Jobs/Details/{p['JobId']}", p) for p in posts]
+
+
+def _jazzhr_list(c):
+    page = http("GET", f"https://{c['board']}.applytojob.com/apply", headers={"Accept": "text/html"}).text
+    jobs = []
+    for item in re.findall(r"list-group-item-heading.*?</ul>", page, re.S):
+        link = re.search(r'href="([^"]+/apply/(\w+)/[^"]*)">\s*(.*?)\s*</a>', item, re.S)
+        where = re.search(r"fa-map-marker'></i>\s*([^<]*)", item)
+        if link:
+            jobs.append(Job(link[2], html.unescape(link[3]), (where[1].strip() if where else ""), link[1]))
+    return jobs
+
+
+def _recruitee_list(c):
+    posts = http("GET", f"https://{c['board']}.recruitee.com/api/offers/").json().get("offers") or []
+    posts = sorted(posts, key=lambda p: p.get("published_at") or "", reverse=True)
+    return [Job(str(p["id"]), p["title"], p.get("location") or "", p["careers_url"],
+                {"description": (p.get("description") or "") + (p.get("requirements") or "")}) for p in posts]
+
+
 LIST = {"greenhouse": _greenhouse_list, "lever": _lever_list, "ashby": _ashby_list, "workday": _workday_list,
         "ukg": _ukg_list, "workable": _workable_list, "oracle": _oracle_list, "smartrecruiters": _smartrecruiters_list,
         "consider": _consider_list, "getro": _getro_list, "jibe": _jibe_list, "eightfold": _eightfold_list,
-        "rss": _rss_list, "amazon": _amazon_list, "phenom": _phenom_list, "sfxml": _sfxml_list, "bamboohr": _bamboohr_list, "sitemap": _sitemap_list, "icims": _icims_list, "rippling": _rippling_list, "selectminds": _selectminds_list}
+        "rss": _rss_list, "amazon": _amazon_list, "phenom": _phenom_list, "sfxml": _sfxml_list, "bamboohr": _bamboohr_list, "sitemap": _sitemap_list, "icims": _icims_list, "rippling": _rippling_list, "selectminds": _selectminds_list,
+        "paylocity": _paylocity_list, "recruitee": _recruitee_list, "jazzhr": _jazzhr_list}
 DETAIL = {"greenhouse": _greenhouse_detail, "lever": _lever_detail, "ashby": _ashby_detail, "workday": _workday_detail,
           "ukg": _ukg_detail, "workable": _workable_detail, "oracle": _oracle_detail,
           "smartrecruiters": _smartrecruiters_detail, "consider": _consider_detail, "getro": _getro_detail,
           "jibe": _jibe_detail, "eightfold": _eightfold_detail, "rss": _rss_detail,
-          "amazon": _amazon_detail, "phenom": _phenom_detail, "sfxml": _rss_detail, "bamboohr": _bamboohr_detail, "sitemap": _sitemap_detail, "icims": _icims_detail, "rippling": _sitemap_detail, "selectminds": _selectminds_detail}
+          "amazon": _amazon_detail, "phenom": _phenom_detail, "sfxml": _rss_detail, "bamboohr": _bamboohr_detail, "sitemap": _sitemap_detail, "icims": _icims_detail, "rippling": _sitemap_detail, "selectminds": _selectminds_detail,
+          "paylocity": _sitemap_detail, "recruitee": _rss_detail, "jazzhr": _sitemap_detail}
 
 
 def fetch_list(company, newest=None):

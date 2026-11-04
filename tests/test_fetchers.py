@@ -337,3 +337,33 @@ def test_selectminds(monkeypatch):
     j = fetchers.fetch_list(c)[0]
     assert (j.id, j.title, j.location) == ("20041", "Data & Analyst", "BEAUMONT, Texas, United States")
     assert "2 years" in fetchers.fetch_detail(c, j)
+
+
+def test_paylocity_newest_first(monkeypatch):
+    jobs = [{"JobId": 1, "JobTitle": "Merchandiser", "PublishedDate": "2026-10-01", "LocationName": "Humble",
+             "JobLocation": {"City": "Pasadena", "State": "TX", "Country": "USA"}},
+            {"JobId": 2, "JobTitle": "Data Analyst", "PublishedDate": "2026-11-01", "LocationName": "Houston", "JobLocation": None}]
+    page = "<script>window.pageData = %s;\n</script>" % json.dumps({"Jobs": jobs})
+    monkeypatch.setattr(fetchers, "http", fake_http({"jobs/All/abc/Acme": Resp(text=page)}, []))
+    got = fetchers.fetch_list({"platform": "paylocity", "board": "abc/Acme"})
+    assert [(j.id, j.location) for j in got] == [("2", "Houston"), ("1", "Pasadena, TX, USA")]
+    assert got[0].url == "https://recruiting.paylocity.com/Recruiting/Jobs/Details/2"
+
+
+def test_recruitee(monkeypatch):
+    offers = {"offers": [{"id": 7, "title": "Business Operations Analyst", "location": "Austin, Texas, United States",
+                          "careers_url": "https://acme.recruitee.com/o/boa", "published_at": "2026-11-04",
+                          "description": "<p>SQL</p>", "requirements": "<p>2 years</p>"}]}
+    monkeypatch.setattr(fetchers, "http", fake_http({"acme.recruitee.com/api/offers": Resp(offers)}, []))
+    c = {"platform": "recruitee", "board": "acme"}
+    j = fetchers.fetch_list(c)[0]
+    assert (j.title, j.location) == ("Business Operations Analyst", "Austin, Texas, United States")
+    assert fetchers.fetch_detail(c, j) == "<p>SQL</p><p>2 years</p>"
+
+
+def test_jazzhr(monkeypatch):
+    page = ("<li class=\"list-group-item\"><h3 class='list-group-item-heading'><a href=\"https://acme.applytojob.com/apply/aB1/Data-Analyst\">"
+            "\n Data Analyst &amp; BI </a></h3><ul class='list-inline'><li><i class='fa fa-map-marker'></i>Houston, TX</li></ul></li>")
+    monkeypatch.setattr(fetchers, "http", fake_http({"acme.applytojob.com/apply": Resp(text=page)}, []))
+    j = fetchers.fetch_list({"platform": "jazzhr", "board": "acme"})[0]
+    assert (j.id, j.title, j.location, j.url) == ("aB1", "Data Analyst & BI", "Houston, TX", "https://acme.applytojob.com/apply/aB1/Data-Analyst")
