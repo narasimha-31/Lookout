@@ -118,6 +118,8 @@ def test_dealbreakers():
         "If you prefer that your profile not be used in this process, you can opt out at any time.",
         "Where roles have hard requirements (eg days in office, unable to provide visas, etc), tell us.",
         "- Employer sponsored health, dental and vision plan with no monthly premium",
+        "Benefits are an integral part of total rewards and First Citizens Bank is committed to meet the needs of our associates.",
+        "Citizens Bank needs analysts who are eligible for promotion.",
         "While relocation, immigration, and/or tax compliance support are not guaranteed, we may offer assistance.",
     ]
     for s in allowed:
