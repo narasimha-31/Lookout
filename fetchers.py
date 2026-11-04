@@ -566,6 +566,36 @@ def _paylocity_list(c):
                 f"https://recruiting.paylocity.com/Recruiting/Jobs/Details/{p['JobId']}", p) for p in posts]
 
 
+def _avature_list(c):
+    # board is host plus locale, e.g. insperity.avature.net/en_US
+    jobs, seen = [], set()
+    while len(jobs) < _cap(c):
+        page = http("GET", f"https://{c['board']}/careers/SearchJobs", params={"jobOffset": len(seen)}, headers={"Accept": "text/html"}).text
+        cards = re.findall(r'<article class="article article--result">(.*?)</article>', page, re.S)
+        new = 0
+        for card in cards:
+            link = re.search(r'href="([^"]+/JobDetail/[^"]*?(\d+))"\s*>\s*(.*?)\s*</a>', card, re.S)
+            if not link or link[2] in seen:
+                continue
+            seen.add(link[2])
+            new += 1
+            where = re.search(r'list-item-location">([^<]*)', card)
+            jobs.append(Job(link[2], html.unescape(link[3]), html.unescape(where[1].strip()) if where else "", link[1]))
+        if not new:
+            return jobs
+    return jobs
+
+
+def _avature_detail(c, job):
+    page = http("GET", job.url, headers={"Accept": "text/html"}).text
+    start = page.find("tf_replaceFieldVideoTokens")
+    if start < 0:
+        return ""
+    start = page.find(">", start) + 1
+    end = page.find('class="article__content"', start)
+    return page[start:page.rfind("<", start, end if end > 0 else len(page))]
+
+
 def _jazzhr_list(c):
     page = http("GET", f"https://{c['board']}.applytojob.com/apply", headers={"Accept": "text/html"}).text
     jobs = []
@@ -588,13 +618,13 @@ LIST = {"greenhouse": _greenhouse_list, "lever": _lever_list, "ashby": _ashby_li
         "ukg": _ukg_list, "workable": _workable_list, "oracle": _oracle_list, "smartrecruiters": _smartrecruiters_list,
         "consider": _consider_list, "getro": _getro_list, "jibe": _jibe_list, "eightfold": _eightfold_list,
         "rss": _rss_list, "amazon": _amazon_list, "phenom": _phenom_list, "sfxml": _sfxml_list, "bamboohr": _bamboohr_list, "sitemap": _sitemap_list, "icims": _icims_list, "rippling": _rippling_list, "selectminds": _selectminds_list,
-        "paylocity": _paylocity_list, "recruitee": _recruitee_list, "jazzhr": _jazzhr_list}
+        "paylocity": _paylocity_list, "recruitee": _recruitee_list, "jazzhr": _jazzhr_list, "avature": _avature_list}
 DETAIL = {"greenhouse": _greenhouse_detail, "lever": _lever_detail, "ashby": _ashby_detail, "workday": _workday_detail,
           "ukg": _ukg_detail, "workable": _workable_detail, "oracle": _oracle_detail,
           "smartrecruiters": _smartrecruiters_detail, "consider": _consider_detail, "getro": _getro_detail,
           "jibe": _jibe_detail, "eightfold": _eightfold_detail, "rss": _rss_detail,
           "amazon": _amazon_detail, "phenom": _phenom_detail, "sfxml": _rss_detail, "bamboohr": _bamboohr_detail, "sitemap": _sitemap_detail, "icims": _icims_detail, "rippling": _sitemap_detail, "selectminds": _selectminds_detail,
-          "paylocity": _sitemap_detail, "recruitee": _rss_detail, "jazzhr": _sitemap_detail}
+          "paylocity": _sitemap_detail, "recruitee": _rss_detail, "jazzhr": _sitemap_detail, "avature": _avature_detail}
 
 
 def fetch_list(company, newest=None):

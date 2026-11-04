@@ -370,3 +370,17 @@ def test_jazzhr(monkeypatch):
     monkeypatch.setattr(fetchers, "http", fake_http({"acme.applytojob.com/apply": Resp(text=page)}, []))
     j = fetchers.fetch_list({"platform": "jazzhr", "board": "acme"})[0]
     assert (j.id, j.title, j.location, j.url) == ("aB1", "Data Analyst & BI", "Houston, TX", "https://acme.applytojob.com/apply/aB1/Data-Analyst")
+
+
+def test_avature_pages_until_nothing_new(monkeypatch):
+    card = ('<article class="article article--result"><a href="https://a.avature.net/en_US/careers/JobDetail/Houston-Data-Analyst/%s">'
+            "\n Data Analyst \n</a><span class=\"list-item-location\">Houston, Texas, United States</span></article>")
+    pages = {0: card % 1 + card % 2, 2: card % 3, 3: card % 3}
+    monkeypatch.setattr(fetchers, "http", lambda m, u, params=None, **kw: Resp(text=pages[params["jobOffset"]]))
+    jobs = fetchers.fetch_list({"platform": "avature", "board": "a.avature.net/en_US"})
+    assert [(j.id, j.title, j.location) for j in jobs] == [("1", "Data Analyst", "Houston, Texas, United States"),
+                                                           ("2", "Data Analyst", "Houston, Texas, United States"),
+                                                           ("3", "Data Analyst", "Houston, Texas, United States")]
+    detail = '<div class="x tf_replaceFieldVideoTokens"><p>SQL, 2 years</p></div><div class="article__content"><a>Apply</a>'
+    monkeypatch.setattr(fetchers, "http", lambda *a, **kw: Resp(text=detail))
+    assert fetchers.fetch_detail({"platform": "avature"}, jobs[0]) == "<p>SQL, 2 years</p></div>"
