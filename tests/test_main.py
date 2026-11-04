@@ -1,4 +1,4 @@
-import pytest
+﻿import pytest
 
 import main
 from fetchers import Job
@@ -22,7 +22,7 @@ def world(monkeypatch):
         w["sent"].append(msg["Subject"])
 
     monkeypatch.setattr(main.fetchers, "fetch_list", fetch_list)
-    monkeypatch.setattr(main.fetchers, "fetch_detail", lambda c, j: w["jd"].get(j.id, "<p>Great job</p>"))
+    monkeypatch.setattr(main.fetchers, "fetch_detail", lambda c, j: w["jd"].get(j.id, "<p>Great job using SQL</p>"))
     monkeypatch.setattr(main.db, "save_jobs", lambda rows: w["saved"].extend(rows))
     monkeypatch.setattr(main.db, "seen_ids", lambda cid, ids: {r["external_job_id"] for r in w["saved"]} & set(ids))
     monkeypatch.setattr(main.db, "mark_first_run", lambda cid: w["marked"].append(cid))
@@ -69,8 +69,14 @@ def test_rejected_jobs_are_saved_not_emailed(world):
 def test_experience_cutoff(world):
     world["jobs"] = [job(1), job(2), job(3)]
     world["jd"] = {"1": "<p>4-6 years of experience</p>", "2": "<p>1-3 years of experience with SQL</p>",
-                   "3": "<p>2+ years of experience</p>"}
+                   "3": "<p>2+ years of experience with Tableau</p>"}
     assert main.check(company(), F)[0] == 2
+
+
+def test_data_title_without_data_tools_is_skipped(world):
+    world["jobs"] = [job(1), job(2)]
+    world["jd"] = {"1": "<p>Track orders in Excel and SAP</p>", "2": ""}
+    assert main.check(company(), F)[0] == 1
 
 
 def test_failed_send_is_retried_next_run(world):
@@ -199,7 +205,7 @@ def test_broken_posting_does_not_block_others(world, monkeypatch):
 
 def test_senior_titles_need_a_low_years_ask(world):
     world["jobs"] = [job(1, "Senior Data Analyst"), job(2, "Sr. Data Analyst"), job(3, "Senior Data Analyst II")]
-    world["jd"] = {"1": "<p>2-3 years of experience</p>", "2": "<p>5+ years of experience</p>", "3": "<p>Great team</p>"}
+    world["jd"] = {"1": "<p>2-3 years of experience in SQL</p>", "2": "<p>5+ years of experience</p>", "3": "<p>Great team, Python daily</p>"}
     f = {**F, "title_exclude": []}
     assert main.check(company(), f)[0] == 1
     assert world["sent"] == ["New role at Acme: Senior Data Analyst, Houston, TX"]

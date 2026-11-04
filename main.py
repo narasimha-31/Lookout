@@ -65,8 +65,8 @@ def check(company, f, before=None):
             continue
         text = flt.html_to_text(jd)
         years = flt.years_required(text)
-        # unknown analyst titles and non-data coordinators need one of the resume skills in the description
-        unsure = flt.needs_skills(job.title, f) and not flt.skills_ok(text)
+        # every description has to name a real data tool, boards with no description fall back to the title
+        unsure = not flt.skills_ok(text) if text else flt.needs_skills(job.title, f)
         if (unsure or flt.dealbreakers(text, f) or flt.student_only(job.title, text) or flt.abroad(job.location, text, f)
                 or (years is not None and years > 3) or (flt.senior(job.title) and years is None)):
             db.save_jobs([_row(company, job)])
