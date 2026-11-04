@@ -62,6 +62,15 @@ def title_ok(title, f):
     return bool(work) or any(ok for _, ok in _roles(title, f))
 
 
+def needs_skills(title, f):
+    # supply chain coordinators and buyers are often clerical, so the description has to show data work
+    if not title_ok(title, f):
+        return True
+    if _matches(WORK + DATA_DOMAINS + AI_DOMAINS, title):
+        return False
+    return not any(ok and (r in ("analyst", "planner") or r in BUILDERS) for r, ok in _roles(title, f))
+
+
 def title_maybe(title, f):
     # an analyst title without a known domain, worth reading the description for
     return not title_ok(title, f) and any(r == "analyst" for r, _ in _roles(title, f))
