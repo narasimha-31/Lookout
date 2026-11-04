@@ -170,7 +170,8 @@ def _audit_one(c, f):
 def audit():
     # companies change their wording, so recheck every company's newest descriptions each week
     f = db.filters()
-    companies = db.companies()
+    # vc boards mix many startups, each job is already checked on its own
+    companies = [c for c in db.companies() if c["platform"] not in ("consider", "getro")]
 
     def safe(c):
         try:

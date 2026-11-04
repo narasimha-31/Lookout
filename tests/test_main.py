@@ -167,7 +167,8 @@ def test_unchanged_board_skips_database(world, monkeypatch):
 def test_weekly_audit_pauses_companies_that_stopped_sponsoring(world, monkeypatch):
     paused = []
     monkeypatch.setattr(main.db, "pause", lambda cid, note: paused.append((cid, note)))
-    monkeypatch.setattr(main.db, "companies", lambda: [company(1), company(2)])
+    vc = {**company(3), "platform": "getro"}
+    monkeypatch.setattr(main.db, "companies", lambda: [company(1), company(2), vc])
     world["jobs"] = [job(i) for i in range(1, 7)]
     world["jd"] = {str(i): "<p>No sponsorship for this role.</p>" for i in range(1, 5)}
     main.audit()
