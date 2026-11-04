@@ -22,9 +22,9 @@ DATA_DOMAINS = ["data", "analytics", "bi", "business intelligence", "etl", "sql"
 # applied ai work like llm apps, rag and agents, not machine learning research
 AI_DOMAINS = ["ai", "genai", "gen ai", "generative ai", "llm", "llms", "rag", "agentic", "artificial intelligence"]
 # associates, specialists and interns are too broad for words like operations or product
-CORE_DOMAINS = DATA_DOMAINS + ["fp&a", "finance", "financial", "supply chain", "demand", "procurement", "sourcing",
+CORE_DOMAINS = DATA_DOMAINS + ["supply chain", "demand", "procurement", "sourcing",
                                "pricing", "information systems", "s&op", "insights"]
-WORK = ["fp&a", "financial planning and analysis", "financial analysis", "business intelligence", "analytics",
+WORK = ["business intelligence", "analytics",
         "data analysis", "data engineering"]
 # from the resume, one is enough since years and sponsorship still decide
 SKILLS = ["sql", "excel", "python", "power bi", "power query", "dax", "tableau", "looker", "snowflake", "etl", "dashboards?",

@@ -2,10 +2,10 @@ from filters import (abroad, dealbreakers, html_to_text, location_ok, years_requ
                      title_maybe, title_ok)
 
 F = {
-    "title_include": ["data", "analytics", "bi", "business intelligence", "finance", "financial", "fp&a", "supply chain",
+    "title_include": ["data", "analytics", "bi", "business intelligence", "supply chain",
                       "planning", "demand", "procurement", "marketing", "investment", "product", "business", "operations", "audit"],
     "title_exclude": ["senior", "sr", "lead", "manager", "data center", "data entry", "helpdesk", "pqa", "scientist",
-                      "cybersecurity", "benefits"],
+                      "cybersecurity", "benefits", "fp&a", "financial planning", "accounting", "accountant"],
     "dealbreakers": ["unable to sponsor", "no sponsorship", "security clearance"],
     "locations_allowed": ["United States", "USA", "US", "Texas", "TX", "CA"],
     "locations_blocked": ["Canada", "India", "(DE)", "(CA)"],
@@ -14,10 +14,10 @@ F = {
 
 def test_titles():
     good = ["Data Analyst", "Associate Data Engineer", "Supply Chain Analyst - Leadership Program", "Analytics Engineer",
-            "Analyst, Supply Chain Planning", "Corp FP&A Financial Analyst II - (B2)", "Business Intelligence Analyst - Marketing",
+            "Analyst, Supply Chain Planning", "Financial Data Analyst", "Finance Data Analyst II", "Business Intelligence Analyst - Marketing",
             "Data Engineer with PostgreSQL", "Procurement Planner", "Marketing Analyst", "Investment Analyst",
-            "Export & Agency Finance (EAF US) - LatAm Focus - Analyst", "BI Developer", "Data Analytics Intern",
-            "Product Associate, Data & Analytics-Payments", "Engineer, Data Platform", "Financial Planning and Analysis",
+            "BI Developer", "Data Analytics Intern",
+            "Product Associate, Data & Analytics-Payments", "Engineer, Data Platform",
             "Strategic Analytics [Multiple Positions Available]", "Buyer - Procurement Planning",
             "Clinical Data / Reporting Analyst", "Product Support Analyst",
             "Analyst, Client Audit and Performance", "AI/ML Engineer", "AI Engineer", "Generative AI Developer",
@@ -27,7 +27,9 @@ def test_titles():
            "Administrative Support Representative/Data Entry Operator", "PQA Analyst", "Helpdesk Analyst", "Data Scientist",
            "Cybersecurity Analyst I", "Benefits Support Analyst, Missed Enrollments (US)",
            "Laboratory Informatics Master Data Assistant", "Modem Machine Learning Engineer", "Managing SAP Consultant Basis",
-           "Software Engineer", "Data Center Asset Management, Commercial Associate"]
+           "Software Engineer", "Data Center Asset Management, Commercial Associate",
+           "Corp FP&A Financial Analyst II - (B2)", "Financial Planning and Analysis", "Accounting Analyst", "Financial Analyst",
+           "Export & Agency Finance (EAF US) - LatAm Focus - Analyst", "FP&A Analyst"]
     for t in good:
         assert title_ok(t, F), t
     for t in bad:
