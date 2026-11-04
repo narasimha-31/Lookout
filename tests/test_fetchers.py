@@ -301,6 +301,14 @@ def test_sitemap(monkeypatch):
     eh = "<urlset><url><loc>https://e.com/job/data-analyst/birmingham-al/2532189/</loc></url></urlset>"
     monkeypatch.setattr(fetchers, "http", fake_http({"e.com": Resp(text=eh)}, calls))
     assert fetchers.fetch_list({"platform": "sitemap", "board": "e.com/sitemap.xml"})[0].title == "data analyst"
+    md = ("<urlset><url><loc>https://m.org/search/jobdetails/data-engineer/4828d718-26b3-48d8-83e6-17d08a15e580</loc>"
+          "<changefreq>daily</changefreq><lastmod>2026-11-04</lastmod></url>"
+          "<url><loc>https://m.org/search/jobdetails/old-analyst/5828d718-26b3-48d8-83e6-17d08a15e580</loc><lastmod>2026-10-01</lastmod></url></urlset>")
+    mpage = '<script type="application/ld&#x2B;json">{"@type": "JobPosting", "title": "Data Engineer", "description": "SQL"}</script>'
+    monkeypatch.setattr(fetchers, "http", fake_http({"sitemap.xml": Resp(text=md), "jobdetails/data-engineer": Resp(text=mpage)}, calls))
+    mj = fetchers.fetch_list({"platform": "sitemap", "board": "m.org/sitemap.xml"})
+    assert [j.title for j in mj] == ["data engineer", "old analyst"]
+    assert fetchers.fetch_detail({"platform": "sitemap"}, mj[0]) == "SQL"
     sf = "<urlset><url><loc>https://z.com/acme/job/Planner%2C-Supply-Chain/14/</loc></url></urlset>"
     sf_page = '<span class="jobdescription"><p>SQL</p><div>2 years</div></span></span><a class="applylink">Apply</a>'
     monkeypatch.setattr(fetchers, "http", fake_http({"sitemap.xml": Resp(text=sf), "/job/": Resp(text=sf_page)}, calls))

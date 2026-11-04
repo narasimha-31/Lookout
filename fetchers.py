@@ -476,6 +476,9 @@ def _bamboohr_detail(c, job):
 STATE_END = re.compile(r"-(al|ak|az|ar|ca|co|ct|de|fl|ga|hi|id|il|in|ia|ks|ky|la|me|md|ma|mi|mn|ms|mo|mt|ne|nv|nh|nj|nm|ny|nc|nd|oh|ok|or|pa|ri|sc|sd|tn|tx|ut|vt|va|wa|wv|wi|wy|dc)$", re.I)
 
 
+GUID = re.compile(r"[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}", re.I)
+
+
 def _sitemap_list(c):
     # some staffing sites only publish their jobs in a sitemap; the url slug stands in for the title
     index = http("GET", f"https://{c['board']}").text
@@ -483,13 +486,14 @@ def _sitemap_list(c):
     urls = []
     for m in maps:
         page = index if m == f"https://{c['board']}" else http("GET", m).text
-        urls += re.findall(r"<url>\s*<loc>(.*?)</loc>\s*(?:<lastmod>(.*?)</lastmod>)?", page)
-    urls = sorted({u: d for u, d in urls if "/job/" in u}.items(), key=lambda x: x[1], reverse=True)
+        urls += re.findall(r"<url>\s*<loc>(.*?)</loc>(?:(?:(?!</url>).)*?<lastmod>(.*?)</lastmod>)?", page, re.S)
+    urls = sorted({u: d for u, d in urls if "/job/" in u or "/jobdetails/" in u}.items(), key=lambda x: x[1], reverse=True)
     jobs = []
     for url, _ in urls[:int(min(_cap(c), len(urls)))]:
         # the title is the last part with letters, ".../job/plymouth/data-analyst/34088/1027..." included,
         # skipping a trailing place like ".../job/pharmacy-tech/sarasota-fl/2528697/"
         parts = [p for p in reversed(url.rstrip("/").split("/")[3:]) if re.search(r"[a-z]", p, re.I) and p.lower() not in ("job", "jobs")]
+        parts = [p for p in parts if not GUID.fullmatch(p)] or parts
         slug = next((p for p in parts if not STATE_END.search(p)), parts[0] if parts else "")
         jobs.append(Job(url, unquote(re.sub(r"^\d+-", "", slug)).replace("-", " "), "", url))
     return jobs
@@ -497,7 +501,7 @@ def _sitemap_list(c):
 
 def _sitemap_detail(c, job, headers=None, params=None):
     page = http("GET", job.url, headers=headers or {"Accept": "text/html"}, params=params).text
-    for block in re.findall(r"<script[^>]*application/ld\+json[^>]*>(.*?)</script>", page, re.S):
+    for block in re.findall(r"<script[^>]*application/ld(?:\+|&#x2B;|&#43;)json[^>]*>(.*?)</script>", page, re.S):
         try:
             data = json.loads(block)
         except ValueError:
