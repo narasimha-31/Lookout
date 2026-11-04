@@ -565,6 +565,20 @@ def _selectminds_detail(c, job):
     return page[start:page.find("jBlockRegion", start)] if start >= 0 else ""
 
 
+def _sfxml_detail(c, job):
+    text = job.raw.get("description") or ""
+    if "[[" not in text:
+        return text
+    # the feed keeps template fields like [[salaryMin]], the posting page has them filled in
+    page = http("GET", job.url, headers={"Accept": "text/html"}).text
+    start = page.find('class="joqReqDescription"')
+    if start < 0:
+        return text
+    start = page.find(">", start) + 1
+    end = page.find("navBarLevel", start)
+    return page[start:page.rfind("<", start, end if end > 0 else len(page))]
+
+
 def _paylocity_list(c):
     # board is the guid/name part of recruiting.paylocity.com/recruiting/jobs/All/<guid>/<name>
     page = http("GET", f"https://recruiting.paylocity.com/recruiting/jobs/All/{c['board']}", headers={"Accept": "text/html"}).text
@@ -670,7 +684,7 @@ DETAIL = {"greenhouse": _greenhouse_detail, "lever": _lever_detail, "ashby": _as
           "ukg": _ukg_detail, "workable": _workable_detail, "oracle": _oracle_detail,
           "smartrecruiters": _smartrecruiters_detail, "consider": _consider_detail, "getro": _getro_detail,
           "jibe": _jibe_detail, "eightfold": _eightfold_detail, "rss": _rss_detail,
-          "amazon": _amazon_detail, "phenom": _phenom_detail, "sfxml": _rss_detail, "bamboohr": _bamboohr_detail, "sitemap": _sitemap_detail, "icims": _icims_detail, "rippling": _sitemap_detail, "selectminds": _selectminds_detail,
+          "amazon": _amazon_detail, "phenom": _phenom_detail, "sfxml": _sfxml_detail, "bamboohr": _bamboohr_detail, "sitemap": _sitemap_detail, "icims": _icims_detail, "rippling": _sitemap_detail, "selectminds": _selectminds_detail,
           "paylocity": _sitemap_detail, "recruitee": _rss_detail, "jazzhr": _sitemap_detail, "avature": _avature_detail, "taleo": _taleo_detail}
 
 

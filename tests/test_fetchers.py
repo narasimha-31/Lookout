@@ -409,3 +409,13 @@ def test_taleo(monkeypatch):
     state = 'ftlx0!|!short!|!!*!&lt;p&gt;SQL%5C: 2 years&lt;/p&gt;!|!x'
     monkeypatch.setattr(fetchers, "http", fake_http({"jobdetail": Resp(text=f'<input id="initialHistory" value="{state}">')}, calls))
     assert fetchers.fetch_detail(c, j) == "<p>SQL: 2 years</p>"
+
+
+def test_sfxml_fills_template_fields_from_the_posting(monkeypatch):
+    job = Job("1559", "Retail Marketing Analyst", "", "https://career8.successfactors.com/career?company=kia1&career_job_req_id=1559",
+              {"description": "<p>Pay [[salaryMin]] - [[salaryMid]]</p>"})
+    page = '<div class="joqReqDescription"><p>Pay $57,980 - $75,411</p></div><input id="navBarLevel">'
+    monkeypatch.setattr(fetchers, "http", fake_http({"career_job_req_id=1559": Resp(text=page)}, []))
+    assert fetchers.fetch_detail({"platform": "sfxml"}, job) == "<p>Pay $57,980 - $75,411</p></div>"
+    plain = Job("2", "Analyst", "", "u", {"description": "<p>Pay $50,000</p>"})
+    assert fetchers.fetch_detail({"platform": "sfxml"}, plain) == "<p>Pay $50,000</p>"
