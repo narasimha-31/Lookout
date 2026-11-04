@@ -571,10 +571,12 @@ def _avature_list(c):
     jobs, seen = [], set()
     while len(jobs) < _cap(c):
         page = http("GET", f"https://{c['board']}/careers/SearchJobs", params={"jobOffset": len(seen)}, headers={"Accept": "text/html"}).text
-        cards = re.findall(r'<article class="article article--result">(.*?)</article>', page, re.S)
+        # newer sites use article cards, older ones list items
+        cards = re.findall(r'<article class="article article--result">(.*?)</article>|<li role="listitem" class="jobResultItem[^"]*">(.*?)</li>', page, re.S)
+        cards = [a or b for a, b in cards]
         new = 0
         for card in cards:
-            link = re.search(r'href="([^"]+/JobDetail/[^"]*?(\d+))"\s*>\s*(.*?)\s*</a>', card, re.S)
+            link = re.search(r'href="([^"]+/(?:Job|Folder)Detail/[^"]*?(\d+))"[^>]*>\s*(.*?)\s*</a>', card, re.S)
             if not link or link[2] in seen:
                 continue
             seen.add(link[2])
@@ -588,12 +590,12 @@ def _avature_list(c):
 
 def _avature_detail(c, job):
     page = http("GET", job.url, headers={"Accept": "text/html"}).text
-    start = page.find("tf_replaceFieldVideoTokens")
+    start = max(page.find("tf_replaceFieldVideoTokens"), page.find('class="jobDetail'))
     if start < 0:
         return ""
     start = page.find(">", start) + 1
-    end = page.find('class="article__content"', start)
-    return page[start:page.rfind("<", start, end if end > 0 else len(page))]
+    ends = [k for k in (page.find('class="article__content"', start), page.find("ApplyFlowCheck", start)) if k > 0]
+    return page[start:page.rfind("<", start, min(ends) if ends else len(page))]
 
 
 def _jazzhr_list(c):
