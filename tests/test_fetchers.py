@@ -298,6 +298,9 @@ def test_sitemap(monkeypatch):
     uhg = "<urlset><url><loc>https://y.com/job/plymouth/data-analyst/34088/1027</loc><lastmod>2026-11-01</lastmod></url></urlset>"
     monkeypatch.setattr(fetchers, "http", fake_http({"y.com": Resp(text=uhg)}, calls))
     assert fetchers.fetch_list({"platform": "sitemap", "board": "y.com/sitemap.xml"})[0].title == "data analyst"
+    eh = "<urlset><url><loc>https://e.com/job/data-analyst/birmingham-al/2532189/</loc></url></urlset>"
+    monkeypatch.setattr(fetchers, "http", fake_http({"e.com": Resp(text=eh)}, calls))
+    assert fetchers.fetch_list({"platform": "sitemap", "board": "e.com/sitemap.xml"})[0].title == "data analyst"
     sf = "<urlset><url><loc>https://z.com/acme/job/Planner%2C-Supply-Chain/14/</loc></url></urlset>"
     sf_page = '<span class="jobdescription"><p>SQL</p><div>2 years</div></span></span><a class="applylink">Apply</a>'
     monkeypatch.setattr(fetchers, "http", fake_http({"sitemap.xml": Resp(text=sf), "/job/": Resp(text=sf_page)}, calls))
