@@ -1,6 +1,8 @@
 import os
 from datetime import datetime, timedelta, timezone
 
+import requests
+
 from fetchers import http
 
 
@@ -127,3 +129,20 @@ def inbox(company_id):
         return []
     http("DELETE", _url("inbox"), headers=_headers(), params={"company_id": f"eq.{company_id}", "id": f"lt.{rows[0]['id']}"})
     return rows[0]["jobs"]
+
+
+def known():
+    """Lowercased names and boards of every company on record, on or off."""
+    rows = http("GET", _url("companies"), headers=_headers(), params={"select": "name,board"}).json()
+    return {r["name"].lower() for r in rows} | {r["board"].lower() for r in rows}
+
+
+def add_company(row):
+    # the board index rejects a company seen before, blocked ones included
+    try:
+        http("POST", _url("companies"), headers=_headers("return=minimal"), json=row)
+        return True
+    except requests.HTTPError as e:
+        if e.response is not None and e.response.status_code == 409:
+            return False
+        raise
