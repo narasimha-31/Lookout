@@ -41,19 +41,18 @@ def check(company, f, before=None, recheck=False, model=None):
     jobs = list({j.id: j for j in fetchers.fetch_list(company, newest)}.values())
     fingerprint = hashlib.sha1("\n".join(sorted(j.id for j in jobs)).encode()).hexdigest()[:16]
 
-    # titles that can never match are dropped here instead of stored, which keeps the database small
-    jobs_ok = [j for j in jobs if flt.title_ok(j.title, f) or flt.title_maybe(j.title, f)]
     if not company["first_run_done"]:
-        db.save_jobs([_row(company, j) for j in jobs_ok])
+        db.save_jobs([_row(company, j) for j in jobs])
         db.mark_first_run(company["id"])
         return 0, len(jobs), fingerprint
     # same list as last time means nothing new, unless the title rules just changed
     if not recheck and fingerprint == (before or {}).get("ids_hash"):
         return 0, len(jobs), fingerprint
 
-    seen = db.seen_ids(company["id"], [j.id for j in jobs_ok]) if jobs_ok else set()
-    new = [j for j in jobs_ok if j.id not in seen]
-    skipped = [j for j in new if not flt.location_ok(j.location, f)]
+    seen = db.seen_ids(company["id"], [j.id for j in jobs]) if jobs else set()
+    new = [j for j in jobs if j.id not in seen]
+    skipped = [j for j in new if not ((flt.title_ok(j.title, f) or flt.title_maybe(j.title, f))
+                                      and flt.location_ok(j.location, f))]
     if skipped:
         db.save_jobs([_row(company, j) for j in skipped])
 
