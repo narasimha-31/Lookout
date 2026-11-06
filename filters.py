@@ -67,8 +67,9 @@ def senior(title):
 
 
 def max_years(title):
-    # data engineer roles are only worth it at 2 years or less
-    return 2 if re.search(r"\bdata\b", title, re.I) and re.search(r"\bengineer", title, re.I) else 3
+    # data engineer and senior roles are only worth it at 2 years or less
+    data_engineer = re.search(r"\bdata\b", title, re.I) and re.search(r"\bengineer", title, re.I)
+    return 2 if data_engineer or senior(title) else 3
 
 
 def title_ok(title, f):
