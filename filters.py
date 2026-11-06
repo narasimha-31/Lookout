@@ -126,32 +126,28 @@ def _places(location):
     return [p for p in re.split(r"[;|]", location) if p.strip()]
 
 
-def _bare_state(place, f):
-    name = re.sub(r",?\s*(USA|US|United States( of America)?)\s*$", "", place.strip(), flags=re.I).strip()
-    return name.lower() in {t.lower() for t in f["locations_allowed"] if len(t) > 3}
-
-
 def location_ok(location, f):
     places = _places(location)
     if not places:
         return True
-    ours = [p for p in places if _place_ok(p, f)]
-    # "Tennessee, USA; Chennai, India": a bare state next to foreign cities is usually a misread "TN" (Tamil Nadu)
-    if ours and len(ours) < len(places) and all(_bare_state(p, f) for p in ours):
-        return False
-    return bool(ours)
+    # any foreign place means the role can be filled abroad, so "Austin, TX; Bangalore, India" is out
+    return all(_place_ok(p, f) for p in places)
+
+
+WHERE = re.compile(r"based in|located in|work location|job location|location:|onsite in|on-site in|hybrid in|remote in|this (role|position) (is|will be|can be)", re.I)
 
 
 def abroad(location, text, f):
+    foreign = [t for t in f["locations_blocked"] if not t.startswith("(")]
+    # "based in Houston or Bengaluru, India" can be filled abroad even with a us city listed
+    for s in re.split(r"(?<=[.!?;])\s+|\n", text):
+        if WHERE.search(s) and _matches(foreign, s):
+            return True
     # a bare town like "Gratkorn" says nothing, so ask the description
     if any(_us_marked(p, f) or re.match(r"\s*US-", p) for p in _places(location)):
         return False
     names = [t for t in f["locations_allowed"] if not (len(t) == 2 and t.isupper())]
     us = _matches(names, text) or re.search(r"\bU\.?S\.?A?\b", text)
-    # no location at all, so the description has to place it in the US
-    if not location.strip():
-        return not (us or _us_marked(text, f))
-    foreign = [t for t in f["locations_blocked"] if not t.startswith("(")]
     # workday puts the full location on the first line, ", Philippines", while the body may still mention US work
     head = text.strip().split("\n", 1)[0][:200]
     if _matches(foreign, head) and not _us_marked(head, f):

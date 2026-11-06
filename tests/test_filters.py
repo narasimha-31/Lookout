@@ -62,7 +62,9 @@ def test_locations():
     assert location_ok("Houston Corporate", F)
     assert location_ok("2 Locations", F)
     assert location_ok("", F)
-    assert location_ok("Calgary, AB, Canada; Houston, TX, United States", F)
+    # a foreign place next to a us one means the role can be filled abroad
+    assert not location_ok("Calgary, AB, Canada; Houston, TX, United States", F)
+    assert not location_ok("Austin, TX; Bangalore, India", F)
     assert not location_ok("Toronto, ON, Canada", F)
     assert not location_ok("Remote - India", F)
     assert not location_ok("Leduc, AB, Canada", F)
@@ -85,7 +87,7 @@ def test_locations():
     assert not location_ok("Hagatna, Guam, USA", F)
     tn = {**F, "locations_allowed": F["locations_allowed"] + ["Tennessee", "TN"]}
     assert not location_ok("Tennessee, USA; Bengaluru, Karnataka, India; Chennai, Tamil Nadu, India", tn)
-    assert location_ok("Nashville, TN; Bengaluru, Karnataka, India", tn)
+    assert not location_ok("Nashville, TN; Bengaluru, Karnataka, India", tn)
     assert location_ok("Tennessee, USA", tn)
     assert location_ok("Austin, tx area", F) is True  # names match any case, unclear passes
 
@@ -141,11 +143,13 @@ def test_abroad():
     assert abroad("Gratkorn", gratkorn, {**F, "locations_blocked": ["Austria"]})
     assert not abroad("Austin (Oakhill, Office)", "More information about NXP in the United States.",
                       {**F, "locations_blocked": ["Austria"]})
-    assert not abroad("Houston, TX", gratkorn, {**F, "locations_blocked": ["Austria"]})
+    assert abroad("Houston, TX", gratkorn, {**F, "locations_blocked": ["Austria"]})
     assert abroad("Dela Rosa - Street office", ", Philippines\nSupports US and local reporting.",
                   {**F, "locations_blocked": ["Philippines"]})
     assert not abroad("Remote","Work from anywhere in the US. Teams in India too.", F)
-    assert abroad("", "Join our well services team in Aberdeen.", F)
+    # no location and nothing foreign is fine, remote roles often say nothing
+    assert not abroad("", "Join our well services team in Aberdeen.", F)
+    assert abroad("Houston, TX", "This role can be based in Houston or Bengaluru, India.", F)
     assert not abroad("", "Based at our office in Houston, TX.", F)
     assert not abroad("", "This role sits in Texas.", F)
 
