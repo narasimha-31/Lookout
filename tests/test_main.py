@@ -31,6 +31,7 @@ def world(monkeypatch):
     monkeypatch.setattr(main.db, "all_health", lambda: {k: dict(v) for k, v in w["health"].items()})
     monkeypatch.setattr(main.db, "save_health", lambda rows: [w["health"].__setitem__(r["company_id"], r) for r in rows])
     monkeypatch.setattr(main.db, "filters", lambda: w.get("filters", F))
+    monkeypatch.setattr(main.db, "fit_model", lambda: None)
     monkeypatch.setattr(main.db, "set_title_hash", lambda v: w.__setitem__("title_hash", v))
     monkeypatch.setattr(main.mail, "send", send)
     monkeypatch.setenv("GMAIL_USER", "me@example.com")
@@ -66,6 +67,22 @@ def test_new_title_words_recheck_open_jobs_one_email_each(world, monkeypatch):
     world["sent"].clear()
     main.run()
     assert world["sent"] == ["New role at Acme: Data Engineer, Houston, TX"]
+
+
+def test_emailed_job_saves_description_and_fit(world, monkeypatch):
+    monkeypatch.setattr(main.fit, "score", lambda model, title, text: 0.9)
+    world["jobs"] = [job(1)]
+    assert main.check(company(), F, model={"w": {}, "b": 0, "good": 30, "bad": 30})[0] == 1
+    row = [r for r in world["saved"] if r["emailed"]][0]
+    assert row["fit"] == 0.9 and "SQL" in row["description"]
+
+
+def test_broken_model_still_emails(world, monkeypatch):
+    monkeypatch.setattr(main.db, "companies", lambda: [company()])
+    monkeypatch.setattr(main.db, "fit_model", lambda: None)
+    world["jobs"] = [job(1)]
+    main.run()
+    assert world["sent"] == ["New role at Acme: Data Analyst, Houston, TX"]
 
 
 def test_first_run_saves_matching_titles_and_sends_nothing(world):

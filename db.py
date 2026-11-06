@@ -27,6 +27,16 @@ def filters():
     return http("GET", _url("filters"), headers=_headers(), params={"id": "eq.1"}).json()[0]
 
 
+def fit_model():
+    try:
+        rows = http("GET", _url("fit_model"), headers=_headers(), params={"id": "eq.1", "select": "model"}).json()
+        model = rows[0]["model"] if rows else None
+        return model if isinstance(model, dict) and "w" in model else None
+    except Exception:
+        # a broken model must never stop jobs from going out
+        return None
+
+
 def set_title_hash(value):
     http("PATCH", _url("filters"), headers=_headers("return=minimal"), params={"id": "eq.1"}, json={"title_hash": value})
 

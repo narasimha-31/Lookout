@@ -22,14 +22,14 @@ def _message(subject, text, html_body=None):
     return m
 
 
-def job_email(company, job, jd_html, flags, first_seen):
+def job_email(company, job, jd_html, flags, first_seen, fit=None, key=None):
     # some boards send line breaks as escaped "&#xa;" text
     jd_html = re.sub(r"&(?:amp;)?#x[aA];", "<br>", jd_html or "")
     text = html_to_text(jd_html)
     salary = pay(text)
     subject = f"New role at {company}: {job.title}, {job.location or 'location not listed'}"
     rows = [("Company", company), ("Title", job.title), ("Location", job.location or "not listed"),
-            ("Pay", salary), ("First seen", first_seen)]
+            ("Pay", salary), ("Fit", fit), ("First seen", first_seen)]
     head = "\n".join(f"{k}: {v}" for k, v in rows if v)
     plain = f"{head}\nApply: {job.url}\nFlags: {', '.join(flags)}\n\n{text}"
 
@@ -42,7 +42,11 @@ def job_email(company, job, jd_html, flags, first_seen):
             f"<p><a href='{e(job.url)}' style='display:inline-block;background:#1a73e8;color:#fff;padding:12px 28px;"
             f"border-radius:6px;text-decoration:none;font-size:18px'>Apply now</a></p>"
             f"<p style='color:#444'>{e(', '.join(flags))}</p><hr>{body}</div>")
-    return _message(subject, plain, rich)
+    m = _message(subject, plain, rich)
+    if key:
+        # lets a star or delete in gmail be matched back to this job
+        m["X-Lookout-Job"] = key
+    return m
 
 
 def notice(subject, body):

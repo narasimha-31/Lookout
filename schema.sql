@@ -28,6 +28,9 @@ create table seen_jobs (
   first_seen_at timestamptz not null default now(),
   emailed boolean not null default false,
   possible_repost boolean not null default false,
+  -- only kept for emailed jobs, so a star or delete can become a lesson
+  description text,
+  fit real,
   unique (company_id, external_job_id)
 );
 
@@ -53,6 +56,13 @@ create table company_health (
 );
 
 -- job lists sent by a browser button for sites that block automated visits
+create table fit_model (
+  id int primary key default 1 check (id = 1),
+  model jsonb,
+  trained_at timestamptz,
+  agreement text
+);
+
 create table inbox (
   id bigint generated always as identity primary key,
   company_id bigint not null references companies on delete cascade,
@@ -62,6 +72,7 @@ create table inbox (
 
 alter table companies enable row level security;
 alter table inbox enable row level security;
+alter table fit_model enable row level security;
 alter table seen_jobs enable row level security;
 alter table filters enable row level security;
 alter table company_health enable row level security;
