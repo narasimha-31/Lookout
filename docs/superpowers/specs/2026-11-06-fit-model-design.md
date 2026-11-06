@@ -36,7 +36,7 @@ Title plus description text. A job with no description gets a score from the tit
 - Untouched = no signal.
 - Each job email carries a hidden header with the company id and job id, so a reaction maps to the exact job.
 - Once a day, the daily job reads reactions since the last read, read-only, and saves each one permanently as a lesson. After that the email is never needed again, so Gmail emptying Trash after 30 days loses nothing.
-- If the user stars an email and later deletes it (or the other way round), the latest reaction wins.
+- If an email is both starred and in Trash, Trash wins, since deleting usually comes last.
 
 ### Learning (decided by the user: daily)
 - Every day, after saving new lessons, the model retrains on all lessons so far. Lessons are never discarded.
@@ -66,7 +66,7 @@ A delete only says "bad", not why. One delete barely moves the model, since it l
 When the user decides the score agrees with them often enough, jobs scoring low are still emailed, but with "[low fit]" at the start of the subject. A one-time Gmail filter files those out of the inbox under a label. Starring a low-fit job is the strongest correction. Nothing is ever dropped.
 
 ## Builder's calls (marked as mine, open to change)
-- **Model:** word and two-word features from title plus description (TF-IDF) with logistic regression, using scikit-learn. Trains in seconds on a few thousand lessons. Reinforcement in the sense of learning from rewards on its own choices (a contextual bandit with daily batch updates), not a game-style agent.
+- **Model:** word and two-word features from title plus description (present or not) with logistic regression, written in plain Python so there's no new dependency. Trains in seconds on a few thousand lessons. Reinforcement in the sense of learning from rewards on its own choices (a contextual bandit with daily batch updates), not a game-style agent.
 - **Saved model:** the vocabulary and weights for the top-weighted terms are stored as one database row and loaded once per run.
 - **Where it runs:** reading reactions and retraining run in the existing daily job. Scoring runs in the 10-minute job.
 - **Few lessons:** with fewer than 20 good or fewer than 20 bad lessons, the email shows "learning, no score yet" instead of a misleading number.
