@@ -5,7 +5,7 @@ F = {
     "title_include": ["data", "analytics", "bi", "business intelligence", "supply chain", "gis", "risk", "trading",
                       "energy", "commodities", "settlements", "fundamentals", "planning", "demand", "procurement", "marketing", "investment", "product", "business", "operations", "audit"],
     "title_exclude": ["senior", "sr", "lead", "manager", "data center", "data entry", "helpdesk", "pqa", "scientist",
-                      "cybersecurity", "benefits", "fp&a", "financial planning", "accounting", "accountant"],
+                      "cybersecurity", "benefits", "fp&a", "financial planning", "accounting", "accountant", "actuarial", "actuary"],
     "dealbreakers": ["unable to sponsor", "no sponsorship", "security clearance"],
     "locations_allowed": ["United States", "USA", "US", "Texas", "TX", "CA"],
     "locations_blocked": ["Canada", "India", "(DE)", "(CA)"],
@@ -30,7 +30,8 @@ def test_titles():
            "Laboratory Informatics Master Data Assistant", "Modem Machine Learning Engineer", "Managing SAP Consultant Basis",
            "Software Engineer", "Data Center Asset Management, Commercial Associate",
            "Corp FP&A Financial Analyst II - (B2)", "Financial Planning and Analysis", "Accounting Analyst", "Financial Analyst",
-           "Export & Agency Finance (EAF US) - LatAm Focus - Analyst", "FP&A Analyst", "Data Entry Clerk", "Pharmacy Technician"]
+           "Export & Agency Finance (EAF US) - LatAm Focus - Analyst", "FP&A Analyst", "Data Entry Clerk", "Pharmacy Technician",
+           "Actuarial Associate - IR Pricing & Product Development"]
     for t in good:
         assert title_ok(t, F), t
     for t in bad:
@@ -204,6 +205,8 @@ def test_pay():
     assert pay("Competitive pay") is None
     assert pay("JR210610 Product Operations Analyst Employee referral: $250 CareBridge Health") is None
     assert pay("Sign-on bonus $5,000. Salary range $68,000 to $90,000") == "$68,000 to $90,000"
+    assert pay("Corebridge matches donations to tax-exempt organizations 1:1, up to $5,000.") is None
+    assert pay("The anticipated salary range is $115, 000 to $120, 000 at the start.") == "$115, 000 to $120, 000"
 
 
 def test_html_to_text():

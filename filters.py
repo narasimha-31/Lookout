@@ -6,7 +6,9 @@ NUMBER_WORDS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, 
 YEARS = re.compile(r"(?<![\d.])(\d{1,2}|" + "|".join(NUMBER_WORDS) + r")\s*\+?\s*(?:\(\d{1,2}\)\s*)?"
                    r"(?:(?:-|–|to)\s*(?:\d{1,2}|" + "|".join(NUMBER_WORDS) + r")\s*\+?\s*)?"
                    r"(?:(?:or more|or greater|plus)\s+)?(?:years?|yrs?)\b", re.I)
-PAY = re.compile(r"\$\s?\d[\d,]*(?:\.\d+)?\s*[kK]?(?:\s*(?:-|–|to)\s*\$?\s?\d[\d,]*(?:\.\d+)?\s*[kK]?)?")
+# "$115, 000" shows up with a stray space after the comma
+NUM = r"(?:\d{1,3}(?:,\s?\d{3})+|\d+)(?:\.\d+)?"
+PAY = re.compile(rf"\$\s?{NUM}\s*[kK]?(?:\s*(?:-|–|to)\s*\$?\s?{NUM}\s*[kK]?)?")
 
 
 def _matches(terms, text, flags=re.I):
@@ -272,10 +274,10 @@ def years_required(text):
 def pay(text):
     text = _clean(text)
     for m in PAY.finditer(text):
-        before = re.split(r"[.\n]\s", text[max(0, m.start() - 40):m.start()])[-1]
+        before = re.split(r"[.\n]\s", text[max(0, m.start() - 150):m.start()])[-1]
         after = text[m.end():m.end() + 20]
         # "employee referral: $250" or a signing bonus is not the salary
-        if re.search(r"referral|bonus|stipend|reimburs|allowance|gift|credit", before, re.I):
+        if re.search(r"referral|bonus|stipend|reimburs|allowance|gift|credit|donat|charit|match|contribut|tuition|relocat", before, re.I):
             continue
         hourly = re.search(r"^\s*(/\s*h(ou)?r|per hour|an hour|hourly)", after, re.I)
         amount = float(re.sub(r"[^\d.]", "", m.group(0).split("-")[0].split("–")[0].split("to")[0]) or 0)
