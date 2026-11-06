@@ -83,6 +83,11 @@ def test_locations():
     assert not location_ok("IN - Bengaluru, India", {**F, "locations_allowed": F["locations_allowed"] + ["IN"]})
     assert not location_ok("MYS - Selangor - Petaling Jaya (Ascent Paradigm)", F)
     assert location_ok("USA - Texas - Houston", F)
+    # a foreign city beats a code shared by a state and a country, a plain state code still wins
+    g = {**F, "locations_allowed": F["locations_allowed"] + ["IN", "OH"], "locations_blocked": F["locations_blocked"] + ["Bangalore", "Dublin"]}
+    assert not location_ok("Bangalore, IN", g)
+    assert location_ok("Indianapolis, IN", g)
+    assert location_ok("Dublin, OH", g)
     assert not location_ok("Kulim, 02 (MY)", F)
     assert location_ok("Houston (US)", F)
     assert not location_ok("Barceloneta, Puerto Rico", F)

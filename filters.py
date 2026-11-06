@@ -69,9 +69,8 @@ def senior(title):
 
 
 def max_years(title):
-    # data engineer and senior roles are only worth it at 2 years or less
-    data_engineer = re.search(r"\bdata\b", title, re.I) and re.search(r"\bengineer", title, re.I)
-    return 2 if data_engineer or senior(title) else 3
+    # every role has to ask for under 3 years, "3+" is out
+    return 2
 
 
 def title_ok(title, f):
@@ -108,6 +107,10 @@ def _us_marked(place, f):
     return bool(_matches(names, place) or _matches(codes, re.sub(r"\([A-Z]{2}\)", "", place), 0))
 
 
+# state codes that are also country codes
+TWIN_CODES = {"IN", "CA", "DE", "AR", "CO", "MA", "PA", "ID", "IL", "GA", "SC", "AL", "MD", "ME", "MN", "MT", "NE", "SD", "VA"}
+
+
 def _place_ok(place, f):
     # territories often say "United States" too
     if TERRITORIES.search(place):
@@ -125,7 +128,10 @@ def _place_ok(place, f):
     m = re.search(r"\(([A-Z]{2})\)", place)
     if m:
         return m.group(1) == "US"
-    return _us_marked(place, f) or not _matches(f["locations_blocked"], place)
+    if not _matches(f["locations_blocked"], place):
+        return True
+    # "Dublin, OH" is ours, but in "Bangalore, IN" or "Toronto, CA" the code is a country, not a state
+    return _us_marked(place, {**f, "locations_allowed": [t for t in f["locations_allowed"] if t not in TWIN_CODES]})
 
 
 def _places(location):

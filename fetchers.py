@@ -501,8 +501,8 @@ def _sitemap_list(c):
         parts = [p for p in parts if not GUID.fullmatch(p)] or parts
         slug = next((p for p in parts if not STATE_END.search(p)), parts[0] if parts else "")
         title = html.unescape(unquote(re.sub(r"^\d+-", "", slug)))
-        # successfactors slugs end in the state and zip, "HOUSTON-Trading-Analyst-TX-77056"
-        place = re.search(r"-([a-z]{2})-\d{5}$", title, re.I)
+        # successfactors slugs end in the state, often with a zip, "HOUSTON-Trading-Analyst-TX-77056"
+        place = re.search(r"-([A-Z]{2})(?:-\d{5})?$", title)
         state = place and STATE_END.search("-" + place[1])
         if state:
             title = title[:place.start()]
