@@ -508,7 +508,7 @@ def _sitemap_list(c):
             title = title[:place.start()]
         elif (c.get("overrides") or {}).get("us_only"):
             continue
-        jobs.append(Job(url, title.replace("-", " "), f"{place[1].upper()}, United States" if state else "", url))
+        jobs.append(Job(url, title.replace("-", " ").replace("_", " ").strip(), f"{place[1].upper()}, United States" if state else "", url))
     return jobs
 
 
