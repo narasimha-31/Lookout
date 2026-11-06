@@ -4,3 +4,4 @@ __pycache__/
 .venv/
 .playwright-mcp/
 *.md
+!README.md
