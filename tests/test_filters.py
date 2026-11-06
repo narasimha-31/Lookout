@@ -2,8 +2,8 @@ from filters import (abroad, dealbreakers, html_to_text, location_ok, needs_skil
                      title_maybe, title_ok)
 
 F = {
-    "title_include": ["data", "analytics", "bi", "business intelligence", "supply chain",
-                      "planning", "demand", "procurement", "marketing", "investment", "product", "business", "operations", "audit"],
+    "title_include": ["data", "analytics", "bi", "business intelligence", "supply chain", "gis", "risk", "trading",
+                      "energy", "commodities", "settlements", "fundamentals", "planning", "demand", "procurement", "marketing", "investment", "product", "business", "operations", "audit"],
     "title_exclude": ["senior", "sr", "lead", "manager", "data center", "data entry", "helpdesk", "pqa", "scientist",
                       "cybersecurity", "benefits", "fp&a", "financial planning", "accounting", "accountant"],
     "dealbreakers": ["unable to sponsor", "no sponsorship", "security clearance"],
@@ -21,7 +21,8 @@ def test_titles():
             "Strategic Analytics [Multiple Positions Available]", "Buyer - Procurement Planning",
             "Clinical Data / Reporting Analyst", "Product Support Analyst",
             "Analyst, Client Audit and Performance", "AI/ML Engineer", "AI Engineer", "Generative AI Developer",
-            "Data Steward", "Data Governance Analyst"]
+            "Data Steward", "Data Governance Analyst", "GIS Analyst I", "GIS Data Entry Analyst", "GIS Technician",
+            "Energy Trading Analyst", "Commodities Risk Analyst", "Power Settlements Analyst", "Natural Gas Fundamentals Analyst"]
     bad = ["Senior Data Analyst", "Sr. Analyst", "Analyst Manager", "Leadership Coordinator",
            "Data Center Critical Infrastructure Engineer", "Modem System Test Engineer -  6G/5G Data and Networking",
            "Administrative Support Representative/Data Entry Operator", "PQA Analyst", "Helpdesk Analyst", "Data Scientist",
@@ -29,7 +30,7 @@ def test_titles():
            "Laboratory Informatics Master Data Assistant", "Modem Machine Learning Engineer", "Managing SAP Consultant Basis",
            "Software Engineer", "Data Center Asset Management, Commercial Associate",
            "Corp FP&A Financial Analyst II - (B2)", "Financial Planning and Analysis", "Accounting Analyst", "Financial Analyst",
-           "Export & Agency Finance (EAF US) - LatAm Focus - Analyst", "FP&A Analyst"]
+           "Export & Agency Finance (EAF US) - LatAm Focus - Analyst", "FP&A Analyst", "Data Entry Clerk", "Pharmacy Technician"]
     for t in good:
         assert title_ok(t, F), t
     for t in bad:

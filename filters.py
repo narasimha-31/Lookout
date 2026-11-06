@@ -14,7 +14,9 @@ def _matches(terms, text, flags=re.I):
 
 
 ROLES = ["analyst", "engineer", "developer", "specialist", "associate", "planner", "coordinator", "buyer", "steward", "intern",
-         "internship", "co-op"]
+         "internship", "co-op", "technician"]
+# gis data entry and gis technician jobs are real entry gis work
+GIS_OK = ["data entry", "technician"]
 # engineers and developers only count for data work, not "Data Center Engineer" style titles
 BUILDERS = ["engineer", "developer"]
 DATA_DOMAINS = ["data", "analytics", "bi", "business intelligence", "etl", "sql", "reporting", "power bi", "tableau",
@@ -28,15 +30,22 @@ WORK = ["business intelligence", "analytics",
         "data analysis", "data engineering"]
 # real data tools from the resume, excel or sap alone is clerical work
 SKILLS = ["sql", "python", "power bi", "power query", "dax", "tableau", "looker", "snowflake", "etl", "pandas", "postgresql",
-          "sql server", "bigquery", "airflow", "dbt", "kafka", "qgis", "postgis", "arcgis", "databricks"]
+          "sql server", "bigquery", "airflow", "dbt", "kafka", "gis", "esri", "qgis", "postgis", "arcgis", "databricks"]
 TERRITORIES = re.compile(r"puerto rico|guam|virgin islands|american samoa|mariana islands|\bPR\b(?=,? (US|USA|United States)\b|$)", re.I)
 PARTS = re.compile(r"\s[-–—|/]\s|[,()|:–—]")
 LEVEL = re.compile(r"\b([ivx]+|\d+|jr\.?|junior|entry[- ]level|level \w+)\b", re.I)
 
 
+def _excluded(title, f):
+    hits = _matches(f["title_exclude"], title)
+    if _matches(["gis"], title):
+        hits = [h for h in hits if h not in GIS_OK]
+    return hits
+
+
 def _roles(title, f):
     """Yields (role, matched) for each role word, matched when a domain word sits with it."""
-    if _matches(f["title_exclude"], title):
+    if _excluded(title, f):
         return
     parts = [p.strip() for p in PARTS.split(title) if p.strip()]
     for part in parts:
@@ -57,7 +66,7 @@ def senior(title):
 
 def title_ok(title, f):
     # some titles name only the work, like "Financial Planning and Analysis"
-    work = not _matches(f["title_exclude"], title) and _matches(WORK, title)
+    work = not _excluded(title, f) and _matches(WORK, title)
     return bool(work) or any(ok for _, ok in _roles(title, f))
 
 
