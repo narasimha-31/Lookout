@@ -1,7 +1,5 @@
 import sys
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
-from zoneinfo import ZoneInfo
 
 import db
 import fetchers
@@ -30,19 +28,18 @@ def review():
             return None
     with ThreadPoolExecutor(8) as pool:
         counts = list(pool.map(safe, low))
-    day = datetime.now(ZoneInfo("America/Chicago")).strftime("%Y-%m-%d")
-    paused, kept = [], []
+    empty, kept = [], []
     for c, n in zip(low, counts):
+        # report only, companies stay checked every run in case a data role opens
         if n == 0:
-            db.pause(c["id"], f"paused: sponsors other roles ({c['sponsor_mix']}% engineering and data), no data roles posted ({day})")
-            paused.append(f"{c['name']}: {c['sponsor_mix']}% engineering and data")
+            empty.append(f"{c['name']}: {c['sponsor_mix']}% engineering and data")
         else:
             kept.append(f"{c['name']}: {'board down, checked next time' if n is None else f'{n} data roles open'}")
     body = (f"Checked {len(low)} companies that put under {LOW_MIX}% of their H-1Bs into engineering and data roles.\n\n"
-            + ("Paused, no data roles posted:\n" + "\n".join(paused) if paused else "Nothing paused.")
-            + ("\n\nKept:\n" + "\n".join(kept) if kept else ""))
-    mail.send(mail.notice(f"Lookout review: {len(paused)} paused", body))
-    print(f"checked {len(low)}, paused {len(paused)}")
+            + ("No data roles posted right now:\n" + "\n".join(empty) if empty else "All have data roles open.")
+            + ("\n\nWith data roles:\n" + "\n".join(kept) if kept else ""))
+    mail.send(mail.notice(f"Lookout review: {len(empty)} with no data roles", body))
+    print(f"checked {len(low)}, {len(empty)} with no data roles")
 
 
 if __name__ == "__main__":

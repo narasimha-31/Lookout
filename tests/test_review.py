@@ -4,7 +4,7 @@ from fetchers import Job
 F = {"title_include": ["data"], "title_exclude": [], "dealbreakers": [], "locations_allowed": ["TX"], "locations_blocked": []}
 
 
-def test_pauses_only_low_mix_companies_with_no_data_roles(monkeypatch):
+def test_reports_low_mix_companies_with_no_data_roles_without_pausing(monkeypatch):
     companies = [{"id": 1, "name": "Hospital", "sponsor_mix": 3}, {"id": 2, "name": "Clinic", "sponsor_mix": 5},
                  {"id": 3, "name": "Tech", "sponsor_mix": 80}, {"id": 4, "name": "Down", "sponsor_mix": 0}]
     boards = {1: [Job("1", "Registered Nurse", "Houston, TX", "u")], 2: [Job("2", "Data Analyst", "Houston, TX", "u")]}
@@ -22,4 +22,4 @@ def test_pauses_only_low_mix_companies_with_no_data_roles(monkeypatch):
     monkeypatch.setattr(review.fetchers, "fetch_list", fetch)
     monkeypatch.setattr(review.mail, "send", lambda m: sent.append(m["Subject"]))
     review.review()
-    assert paused == [1] and sent == ["Lookout review: 1 paused"]
+    assert paused == [] and sent == ["Lookout review: 1 with no data roles"]
