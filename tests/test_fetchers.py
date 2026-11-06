@@ -353,18 +353,6 @@ def test_rippling(monkeypatch):
     assert j.url == "https://net-power-llc.rippling-ats.com/job/1063983/project-finance-analyst"
 
 
-def test_selectminds(monkeypatch):
-    calls = []
-    listing = ('<p><a href="https://x.referrals.selectminds.com/ETP/jobs/data-analyst-20041" class="job_link font_bold">Data &amp; Analyst</a></p>'
-               ' <p class="jlr_location"> <a href="#" class="location"><span class="loc_icon entypo">&#128269;</span>BEAUMONT, Texas, United States</a> </p>')
-    page = '<div class="job_description"><p>2 years</p></div><div class="jBlockRegion">x'
-    monkeypatch.setattr(fetchers, "http", fake_http({"latest-jobs": Resp(text=listing), "/jobs/data-analyst-20041": Resp(text=page)}, calls))
-    c = {"platform": "selectminds", "board": "x.referrals.selectminds.com/ETP"}
-    j = fetchers.fetch_list(c)[0]
-    assert (j.id, j.title, j.location) == ("20041", "Data & Analyst", "BEAUMONT, Texas, United States")
-    assert "2 years" in fetchers.fetch_detail(c, j)
-
-
 def test_paylocity_newest_first(monkeypatch):
     jobs = [{"JobId": 1, "JobTitle": "Merchandiser", "PublishedDate": "2026-10-01", "LocationName": "Humble",
              "JobLocation": {"City": "Pasadena", "State": "TX", "Country": "USA"}},
@@ -496,3 +484,48 @@ def test_sitemap_path(monkeypatch):
     }, calls))
     jobs = fetchers.fetch_list({"platform": "sitemap", "board": "v.com/sitemap.xml", "overrides": {"sitemap_path": "/EA/"}})
     assert [j.title for j in jobs] == ["Reston Data Analyst"]
+
+
+def test_jobvite(monkeypatch):
+    calls = []
+    page = ('<td class="jv-job-list-name">\n <a href="/acme/job/oAbc1">Data &amp; Analyst</a>\n </td>\n'
+            '<td class="jv-job-list-location">\n Remote<span>,</span>\n United States\n </td>')
+    monkeypatch.setattr(fetchers, "http", fake_http({"jobvite.com/acme/jobs": Resp(text=page)}, calls))
+    j = fetchers.fetch_list({"platform": "jobvite", "board": "acme"})[0]
+    assert (j.id, j.title, j.location) == ("oAbc1", "Data & Analyst", "Remote, United States")
+    assert j.url == "https://jobs.jobvite.com/acme/job/oAbc1"
+
+
+def test_rippling_api_board(monkeypatch):
+    calls = []
+    monkeypatch.setattr(fetchers, "http", fake_http({
+        "/jobs/u1": Resp({"description": {"role": "<p>2 years</p>", "company": "<p>About</p>"}}),
+        "/board/acme/jobs": Resp([{"uuid": "u1", "name": "Data Analyst ", "workLocation": {"label": "Austin, TX"},
+                                   "url": "https://ats.rippling.com/acme/jobs/u1"}]),
+    }, calls))
+    c = {"platform": "rippling", "board": "acme"}
+    j = fetchers.fetch_list(c)[0]
+    assert (j.id, j.title, j.location) == ("u1", "Data Analyst", "Austin, TX")
+    assert fetchers.fetch_detail(c, j) == "<p>2 years</p><p>About</p>"
+
+
+def test_pinpoint(monkeypatch):
+    post = {"id": "9", "title": "Data Analyst", "url": "https://x/en/postings/9", "description": "<p>SQL</p>",
+            "compensation_visible": True, "compensation": "$90,000 / year", "location": {"city": "CA", "province": "California"}}
+    monkeypatch.setattr(fetchers, "http", fake_http({"careers.acme.com/postings.json": Resp({"data": [post]})}, []))
+    c = {"platform": "pinpoint", "board": "careers.acme.com"}
+    j = fetchers.fetch_list(c)[0]
+    assert (j.id, j.location) == ("9", "California")
+    assert fetchers.fetch_detail(c, j) == "<p>SQL</p><p>$90,000 / year</p>"
+
+
+def test_selectminds_search_pages(monkeypatch):
+    calls = []
+    card = ('<p><a href="https://x.referrals.selectminds.com/ETP/jobs/data-analyst-{0}" class="job_link font_bold">Data &amp; Analyst</a></p>'
+            '<p class="jlr_company">Acme</p><p class="jlr_cat_loc"><span class="font_bold">Location:</span>'
+            '<span class="location">\n BEAUMONT, Texas \n</span></p>')
+    first = '<div data-jsid="55">' + card.format(1) + '<div id="jPaginateNumPages" class="ghost">2.0</div>'
+    monkeypatch.setattr(fetchers, "http", fake_http({"/jobs/search/55/page2": Resp(text=card.format(2)),
+                                                     "/jobs/search": Resp(text=first)}, calls))
+    jobs = fetchers.fetch_list({"platform": "selectminds", "board": "x.referrals.selectminds.com/ETP"})
+    assert [(j.id, j.title, j.location) for j in jobs] == [("2", "Data & Analyst", "BEAUMONT, Texas"), ("1", "Data & Analyst", "BEAUMONT, Texas")]
