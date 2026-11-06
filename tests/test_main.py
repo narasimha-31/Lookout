@@ -116,7 +116,7 @@ def test_experience_cutoff(world):
 
 def test_every_role_caps_at_three_years(world):
     world["jobs"] = [job(1, "Data Engineer"), job(2, "Data Engineer II"), job(3, "Data Analyst")]
-    world["jd"] = {"1": "<p>4 years of experience with SQL</p>", "2": "<p>2 years of experience with SQL</p>",
+    world["jd"] = {"1": "<p>3 years of experience with SQL</p>", "2": "<p>2 years of experience with SQL</p>",
                    "3": "<p>3+ years of experience with SQL</p>"}
     assert main.check(company(), F)[0] == 2
 

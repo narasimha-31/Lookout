@@ -70,8 +70,8 @@ def senior(title):
 
 
 def max_years(title):
-    # "3+" is fine, 4 or more is out
-    return 3
+    # data engineers stay at 2 years or less, other roles take "3+"
+    return 2 if re.search(r"\bengineer", title, re.I) else 3
 
 
 def title_ok(title, f):
