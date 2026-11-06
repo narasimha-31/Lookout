@@ -73,6 +73,13 @@ def test_experience_cutoff(world):
     assert main.check(company(), F)[0] == 2
 
 
+def test_data_engineer_cutoff_is_two_years(world):
+    world["jobs"] = [job(1, "Data Engineer"), job(2, "Data Engineer II"), job(3, "Data Analyst")]
+    world["jd"] = {"1": "<p>3 years of experience with SQL</p>", "2": "<p>2 years of experience with SQL</p>",
+                   "3": "<p>3 years of experience with SQL</p>"}
+    assert main.check(company(), F)[0] == 2
+
+
 def test_data_title_without_data_tools_is_skipped(world):
     world["jobs"] = [job(1), job(2)]
     world["jd"] = {"1": "<p>Track orders in Excel and SAP</p>", "2": ""}

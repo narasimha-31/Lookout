@@ -68,7 +68,7 @@ def check(company, f, before=None):
         # every description has to name a real data tool, boards with no description fall back to the title
         unsure = not flt.skills_ok(text) if text else flt.needs_skills(job.title, f)
         if (unsure or flt.dealbreakers(text, f) or flt.student_only(job.title, text) or flt.abroad(job.location, text, f)
-                or (years is not None and years > 3) or (flt.senior(job.title) and years is None)):
+                or (years is not None and years > flt.max_years(job.title)) or (flt.senior(job.title) and years is None)):
             db.save_jobs([_row(company, job)])
             continue
         repost = db.is_repost(company["id"], job.title, job.location)
