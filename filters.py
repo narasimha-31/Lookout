@@ -56,7 +56,9 @@ def _roles(title, f):
         alone = LEVEL.sub("", part).strip(" .").lower() in roles
         for role in roles:
             if role in BUILDERS:
-                yield role, any(_matches(DATA_DOMAINS + AI_DOMAINS, p) for p in (parts if alone else [part]))
+                # ai engineer roles paused for now, put AI_DOMAINS back to resume
+                # yield role, any(_matches(DATA_DOMAINS + AI_DOMAINS, p) for p in (parts if alone else [part]))
+                yield role, any(_matches(DATA_DOMAINS, p) for p in (parts if alone else [part]))
             else:
                 yield role, bool(_matches(f["title_include"] if role in ("analyst", "planner") else CORE_DOMAINS, title))
 
@@ -82,7 +84,8 @@ def needs_skills(title, f):
     # supply chain coordinators and buyers are often clerical, so the description has to show data work
     if not title_ok(title, f):
         return True
-    if _matches(WORK + DATA_DOMAINS + AI_DOMAINS, title):
+    # if _matches(WORK + DATA_DOMAINS + AI_DOMAINS, title):
+    if _matches(WORK + DATA_DOMAINS, title):
         return False
     return not any(ok and (r in ("analyst", "planner") or r in BUILDERS) for r, ok in _roles(title, f))
 

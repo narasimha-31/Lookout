@@ -20,7 +20,9 @@ def test_titles():
             "Product Associate, Data & Analytics-Payments", "Engineer, Data Platform",
             "Strategic Analytics [Multiple Positions Available]", "Buyer - Procurement Planning",
             "Clinical Data / Reporting Analyst", "Product Support Analyst",
-            "Analyst, Client Audit and Performance", "AI/ML Engineer", "AI Engineer", "Generative AI Developer",
+            "Analyst, Client Audit and Performance",
+            # ai engineer roles paused for now
+            # "AI/ML Engineer", "AI Engineer", "Generative AI Developer",
             "Data Steward", "Data Governance Analyst", "GIS Analyst I", "GIS Data Entry Analyst", "GIS Technician",
             "Energy Trading Analyst", "Commodities Risk Analyst", "Power Settlements Analyst", "Natural Gas Fundamentals Analyst"]
     bad = ["Senior Data Analyst", "Sr. Analyst", "Analyst Manager", "Leadership Coordinator",
