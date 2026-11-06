@@ -32,7 +32,6 @@ def world(monkeypatch):
     monkeypatch.setattr(main.db, "save_health", lambda rows: [w["health"].__setitem__(r["company_id"], r) for r in rows])
     monkeypatch.setattr(main.db, "filters", lambda: w.get("filters", F))
     monkeypatch.setattr(main.db, "fit_model", lambda: None)
-    monkeypatch.setattr(main.db, "set_title_hash", lambda v: w.__setitem__("title_hash", v))
     monkeypatch.setattr(main.mail, "send", send)
     monkeypatch.setenv("GMAIL_USER", "me@example.com")
     monkeypatch.setenv("ALERT_TO", "me@example.com")
@@ -45,28 +44,6 @@ def company(cid=1, first_run_done=True):
 
 def job(i, title="Data Analyst", loc="Houston, TX"):
     return Job(str(i), title, loc, f"https://x/{i}")
-
-
-def test_new_title_words_recheck_open_jobs_one_email_each(world, monkeypatch):
-    monkeypatch.setattr(main.db, "companies", lambda: [company()])
-    world["jobs"] = [job(1)]
-    world["health"] = {1: {"ids_hash": "same"}}
-    # first run ever only records the title rules
-    main.run()
-    assert world["title_hash"] == main.title_hash(F) and world["sent"] == ["New role at Acme: Data Analyst, Houston, TX"]
-    # rules change while the board stays the same: open matches still get one email each
-    world["filters"] = {**F, "title_include": ["analyst", "engineer"], "title_hash": world["title_hash"]}
-    world["jobs"] = [job(1), job(2, "Data Engineer"), job(3, "Data Engineer II")]
-    world["sent"].clear()
-    main.run()
-    assert sorted(world["sent"]) == ["New role at Acme: Data Engineer II, Houston, TX", "New role at Acme: Data Engineer, Houston, TX"]
-    assert world["title_hash"] == main.title_hash(world["filters"])
-    # next run is back to one email per new job
-    world["filters"]["title_hash"] = world["title_hash"]
-    world["jobs"].append(job(4, "Data Engineer"))
-    world["sent"].clear()
-    main.run()
-    assert world["sent"] == ["New role at Acme: Data Engineer, Houston, TX"]
 
 
 def test_emailed_job_saves_description_and_fit(world, monkeypatch):

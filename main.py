@@ -1,5 +1,4 @@
 import hashlib
-import json
 import os
 import sys
 import traceback
@@ -33,7 +32,7 @@ def _row(company, job, emailed=False, repost=False, description=None, score=None
             "url": job.url, "emailed": emailed, "possible_repost": repost, "description": description, "fit": score}
 
 
-def check(company, f, before=None, recheck=False, model=None):
+def check(company, f, before=None, model=None):
     """Returns (emails sent, jobs listed, fingerprint of the job list)."""
     f = {**f, **{k: v for k, v in (company.get("overrides") or {}).items() if k in f}}
     # after the first check only the newest jobs matter
@@ -45,8 +44,8 @@ def check(company, f, before=None, recheck=False, model=None):
         db.save_jobs([_row(company, j) for j in jobs])
         db.mark_first_run(company["id"])
         return 0, len(jobs), fingerprint
-    # same list as last time means nothing new, unless the title rules just changed
-    if not recheck and fingerprint == (before or {}).get("ids_hash"):
+    # same list as last time means nothing new
+    if fingerprint == (before or {}).get("ids_hash"):
         return 0, len(jobs), fingerprint
 
     seen = db.seen_ids(company["id"], [j.id for j in jobs]) if jobs else set()
@@ -98,13 +97,13 @@ def _quietly(fn, *args, **kw):
         pass
 
 
-def _one(c, f, before, recheck=False, model=None):
+def _one(c, f, before, model=None):
     """Returns (emails sent, failed, health row)."""
     row = {"company_id": c["id"], "last_success_at": before.get("last_success_at"),
            "last_job_count": before.get("last_job_count"), "last_error": before.get("last_error"),
            "ids_hash": before.get("ids_hash")}
     try:
-        n, count, fingerprint = check(c, f, before, recheck, model)
+        n, count, fingerprint = check(c, f, before, model)
     except Exception as e:
         error = f"{type(e).__name__}: {e}"[:1000]
         last_ok = before.get("last_success_at")
@@ -124,23 +123,15 @@ def _one(c, f, before, recheck=False, model=None):
                   "last_error": None, "ids_hash": fingerprint}
 
 
-def title_hash(f):
-    return hashlib.sha1(json.dumps([sorted(f["title_include"]), sorted(f["title_exclude"])]).encode()).hexdigest()[:16]
-
-
 def run():
     f = db.filters()
     companies = db.companies()
     health = db.all_health()
-    # new title words can make already open jobs match, so every board is read once even if unchanged
-    recheck = f.get("title_hash") not in (None, title_hash(f))
     model = db.fit_model()
     # companies sit on different job boards, so a few at once is still polite
     with ThreadPoolExecutor(8) as pool:
-        results = list(pool.map(lambda c: _one(c, f, health.get(c["id"]) or {}, recheck, model), companies))
+        results = list(pool.map(lambda c: _one(c, f, health.get(c["id"]) or {}, model), companies))
     _quietly(db.save_health, [r[2] for r in results])
-    if f.get("title_hash") != title_hash(f):
-        db.set_title_hash(title_hash(f))
     sent, failed = sum(r[0] for r in results), sum(r[1] for r in results)
     print(f"checked {len(companies)} companies, {sent} new jobs, {failed} failed")
     return len(companies), sent

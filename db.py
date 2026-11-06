@@ -74,10 +74,6 @@ def save_model(model, agreement):
          json={"id": 1, "model": model, "agreement": agreement, "trained_at": datetime.now(timezone.utc).isoformat()})
 
 
-def set_title_hash(value):
-    http("PATCH", _url("filters"), headers=_headers("return=minimal"), params={"id": "eq.1"}, json={"title_hash": value})
-
-
 def _quote(value):
     return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
