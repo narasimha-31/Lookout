@@ -39,7 +39,9 @@ create table filters (
   title_exclude text[] not null,
   dealbreakers text[] not null,
   locations_allowed text[] not null,
-  locations_blocked text[] not null
+  locations_blocked text[] not null,
+  -- fingerprint of the title rules, a change sends one digest
+  title_hash text
 );
 
 create table company_health (

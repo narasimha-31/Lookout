@@ -27,6 +27,10 @@ def filters():
     return http("GET", _url("filters"), headers=_headers(), params={"id": "eq.1"}).json()[0]
 
 
+def set_title_hash(value):
+    http("PATCH", _url("filters"), headers=_headers("return=minimal"), params={"id": "eq.1"}, json={"title_hash": value})
+
+
 def _quote(value):
     return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
 

@@ -1,4 +1,5 @@
 import hashlib
+import json
 import os
 import sys
 import traceback
@@ -31,8 +32,8 @@ def _row(company, job, emailed=False, repost=False):
             "location": job.location, "url": job.url, "emailed": emailed, "possible_repost": repost}
 
 
-def check(company, f, before=None):
-    """Returns (emails sent, jobs listed, fingerprint of the job list)."""
+def check(company, f, before=None, digest=None):
+    """Returns (emails sent, jobs listed, fingerprint of the job list). With a digest list, matches go there instead of one email each."""
     f = {**f, **{k: v for k, v in (company.get("overrides") or {}).items() if k in f}}
     # after the first check only the newest jobs matter
     newest = NEWEST if company["first_run_done"] else FIRST_CHECK
@@ -45,8 +46,8 @@ def check(company, f, before=None):
         db.save_jobs([_row(company, j) for j in jobs_ok])
         db.mark_first_run(company["id"])
         return 0, len(jobs), fingerprint
-    # same list as last time means nothing new, no need to ask the database
-    if fingerprint == (before or {}).get("ids_hash"):
+    # same list as last time means nothing new, unless the title rules just changed
+    if digest is None and fingerprint == (before or {}).get("ids_hash"):
         return 0, len(jobs), fingerprint
 
     seen = db.seen_ids(company["id"], [j.id for j in jobs_ok]) if jobs_ok else set()
@@ -80,8 +81,11 @@ def check(company, f, before=None):
             flags.append("no description on this board, check sponsorship on the posting")
         name = f"{job.company} (via {company['name']})" if job.company else company["name"]
         first_seen = datetime.now(ZoneInfo("America/Chicago")).strftime("%b %d, %I:%M %p CT")
-        # send before saving so a failed send is retried next run
-        mail.send(mail.job_email(name, job, jd, flags, first_seen))
+        if digest is not None:
+            digest.append(f"{name} | {job.title} | {job.location or 'location not listed'} | {', '.join(flags)}\n{job.url}")
+        else:
+            # send before saving so a failed send is retried next run
+            mail.send(mail.job_email(name, job, jd, flags, first_seen))
         db.save_jobs([_row(company, job, emailed=True, repost=repost)])
         sent += 1
     # no fingerprint so the unchanged list is looked at again
@@ -95,13 +99,13 @@ def _quietly(fn, *args, **kw):
         pass
 
 
-def _one(c, f, before):
+def _one(c, f, before, digest=None):
     """Returns (emails sent, failed, health row)."""
     row = {"company_id": c["id"], "last_success_at": before.get("last_success_at"),
            "last_job_count": before.get("last_job_count"), "last_error": before.get("last_error"),
            "ids_hash": before.get("ids_hash")}
     try:
-        n, count, fingerprint = check(c, f, before)
+        n, count, fingerprint = check(c, f, before, digest)
     except Exception as e:
         error = f"{type(e).__name__}: {e}"[:1000]
         last_ok = before.get("last_success_at")
@@ -121,14 +125,24 @@ def _one(c, f, before):
                   "last_error": None, "ids_hash": fingerprint}
 
 
+def title_hash(f):
+    return hashlib.sha1(json.dumps([sorted(f["title_include"]), sorted(f["title_exclude"])]).encode()).hexdigest()[:16]
+
+
 def run():
     f = db.filters()
     companies = db.companies()
     health = db.all_health()
+    # new title words make already open jobs match, so they go out as one digest instead of a burst
+    digest = [] if f.get("title_hash") not in (None, title_hash(f)) else None
     # companies sit on different job boards, so a few at once is still polite
     with ThreadPoolExecutor(8) as pool:
-        results = list(pool.map(lambda c: _one(c, f, health.get(c["id"]) or {}), companies))
+        results = list(pool.map(lambda c: _one(c, f, health.get(c["id"]) or {}, digest), companies))
     _quietly(db.save_health, [r[2] for r in results])
+    if digest:
+        mail.send(mail.notice(f"Lookout: {len(digest)} open roles match your new titles", "\n\n".join(digest)))
+    if f.get("title_hash") != title_hash(f):
+        db.set_title_hash(title_hash(f))
     sent, failed = sum(r[0] for r in results), sum(r[1] for r in results)
     print(f"checked {len(companies)} companies, {sent} new jobs, {failed} failed")
     return len(companies), sent
