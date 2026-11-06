@@ -527,6 +527,12 @@ def _sitemap_detail(c, job, headers=None, params=None):
                 return html.unescape(item.get("description") or "")
     # successfactors career sites only have it in the page
     found = re.search(r'class="jobdescription"[^>]*>|itemprop="description"[^>]*>', page)
+    column = page.find('class="jobColumnOne"')
+    if not found and column > 0:
+        # newer layouts put the whole posting in the first column
+        start = page.find(">", column) + 1
+        end = page.find('class="jobColumnTwo"', start)
+        return page[start:page.rfind("<", start, end if end > 0 else len(page))]
     if not found:
         return ""
     start = found.end()

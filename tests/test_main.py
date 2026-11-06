@@ -46,19 +46,19 @@ def job(i, title="Data Analyst", loc="Houston, TX"):
     return Job(str(i), title, loc, f"https://x/{i}")
 
 
-def test_new_title_words_send_one_digest(world, monkeypatch):
+def test_new_title_words_recheck_open_jobs_one_email_each(world, monkeypatch):
     monkeypatch.setattr(main.db, "companies", lambda: [company()])
     world["jobs"] = [job(1)]
     world["health"] = {1: {"ids_hash": "same"}}
     # first run ever only records the title rules
     main.run()
     assert world["title_hash"] == main.title_hash(F) and world["sent"] == ["New role at Acme: Data Analyst, Houston, TX"]
-    # rules change while the board stays the same: open matches go out as one digest
+    # rules change while the board stays the same: open matches still get one email each
     world["filters"] = {**F, "title_include": ["analyst", "engineer"], "title_hash": world["title_hash"]}
     world["jobs"] = [job(1), job(2, "Data Engineer"), job(3, "Data Engineer II")]
     world["sent"].clear()
     main.run()
-    assert world["sent"] == ["Lookout: 2 open roles match your new titles"]
+    assert sorted(world["sent"]) == ["New role at Acme: Data Engineer II, Houston, TX", "New role at Acme: Data Engineer, Houston, TX"]
     assert world["title_hash"] == main.title_hash(world["filters"])
     # next run is back to one email per new job
     world["filters"]["title_hash"] = world["title_hash"]
