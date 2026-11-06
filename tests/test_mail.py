@@ -25,3 +25,37 @@ def test_email_has_fit_row_and_job_header(monkeypatch):
     assert msg["X-Lookout-Job"] == "7:abc"
     page = msg.get_body(("html",)).get_content()
     assert "Fit" in page and "82%" in page
+
+
+class FakeBox:
+    folders = {'"[Gmail]/All Mail"': {b"1": "1:a", b"2": "1:b", b"3": None}, '"[Gmail]/Trash"': {b"9": "1:a"}}
+
+    def __init__(self, host):
+        self.folder = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+    def login(self, user, password):
+        pass
+
+    def select(self, folder, readonly=False):
+        assert readonly
+        self.folder = folder
+
+    def search(self, charset, *query):
+        return "OK", [b" ".join(self.folders[self.folder])]
+
+    def fetch(self, i, spec):
+        key = self.folders[self.folder][i]
+        return "OK", [(b"x", (f"X-Lookout-Job: {key}\r\n\r\n" if key else "\r\n").encode())]
+
+
+def test_reactions_trash_wins_and_ignores_unkeyed(monkeypatch):
+    monkeypatch.setenv("GMAIL_USER", "a@b.c")
+    monkeypatch.setenv("GMAIL_APP_PASSWORD", "x")
+    monkeypatch.setattr(mail.imaplib, "IMAP4_SSL", FakeBox)
+    assert mail.reactions() == {"1:a": -1, "1:b": 1}

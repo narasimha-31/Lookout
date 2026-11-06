@@ -37,6 +37,43 @@ def fit_model():
         return None
 
 
+def lessons():
+    # postgrest caps a reply at 1000 rows, so page through all of them
+    out = []
+    while True:
+        rows = http("GET", _url("lessons"), headers=_headers(), params={
+            "select": "company_id,external_job_id,title,description,label,fit,created_at",
+            "order": "id", "limit": "1000", "offset": str(len(out))}).json()
+        out += rows
+        if len(rows) < 1000:
+            return out
+
+
+def save_lessons(rows):
+    if rows:
+        http("POST", _url("lessons"), headers=_headers("resolution=merge-duplicates,return=minimal"),
+             params={"on_conflict": "company_id,external_job_id"}, json=rows)
+
+
+def emailed(keys):
+    out = {}
+    by_company = {}
+    for key in keys:
+        cid, jid = key.split(":", 1)
+        by_company.setdefault(cid, []).append(jid)
+    for cid, jids in by_company.items():
+        rows = http("GET", _url("seen_jobs"), headers=_headers(), params={
+            "select": "company_id,external_job_id,title,description,fit", "company_id": f"eq.{cid}",
+            "external_job_id": f"in.({','.join(_quote(j) for j in jids)})"}).json()
+        out |= {f"{r['company_id']}:{r['external_job_id']}": r for r in rows}
+    return out
+
+
+def save_model(model, agreement):
+    http("POST", _url("fit_model"), headers=_headers("resolution=merge-duplicates,return=minimal"),
+         json={"id": 1, "model": model, "agreement": agreement, "trained_at": datetime.now(timezone.utc).isoformat()})
+
+
 def set_title_hash(value):
     http("PATCH", _url("filters"), headers=_headers("return=minimal"), params={"id": "eq.1"}, json={"title_hash": value})
 

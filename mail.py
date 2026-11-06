@@ -1,4 +1,6 @@
+import email
 import html
+import imaplib
 import os
 import re
 import smtplib
@@ -76,3 +78,21 @@ def alerts(query, days=14):
                 if part.get_content_type() == "text/html":
                     bodies.append(part.get_payload(decode=True).decode(part.get_content_charset() or "utf-8", "ignore"))
         return bodies
+
+
+def reactions(days=30):
+    """Job key to +1 for a starred job email, -1 for one in trash. Read-only."""
+    found = {}
+    with imaplib.IMAP4_SSL("imap.gmail.com") as box:
+        box.login(os.environ["GMAIL_USER"], os.environ["GMAIL_APP_PASSWORD"])
+        # trash goes last so a starred email that was then deleted counts as bad
+        for folder, query, label in (('"[Gmail]/All Mail"', f'"is:starred newer_than:{days}d"', 1),
+                                     ('"[Gmail]/Trash"', f'"newer_than:{days}d"', -1)):
+            box.select(folder, readonly=True)
+            _, ids = box.search(None, "X-GM-RAW", query)
+            for i in ids[0].split():
+                _, data = box.fetch(i, "(BODY.PEEK[HEADER.FIELDS (X-LOOKOUT-JOB)])")
+                key = email.message_from_bytes(data[0][1]).get("X-Lookout-Job")
+                if key:
+                    found[key.strip()] = label
+    return found

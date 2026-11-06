@@ -63,6 +63,20 @@ create table fit_model (
   agreement text
 );
 
+-- stars and deletes from gmail, kept forever as what the fit model learns from
+create table lessons (
+  id bigint generated always as identity primary key,
+  company_id bigint not null references companies on delete cascade,
+  external_job_id text not null,
+  title text,
+  description text,
+  label smallint not null,
+  source text not null,
+  fit real,
+  created_at timestamptz not null default now(),
+  unique (company_id, external_job_id)
+);
+
 create table inbox (
   id bigint generated always as identity primary key,
   company_id bigint not null references companies on delete cascade,
@@ -73,6 +87,7 @@ create table inbox (
 alter table companies enable row level security;
 alter table inbox enable row level security;
 alter table fit_model enable row level security;
+alter table lessons enable row level security;
 alter table seen_jobs enable row level security;
 alter table filters enable row level security;
 alter table company_health enable row level security;

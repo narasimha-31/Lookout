@@ -147,14 +147,43 @@ def run():
     return len(companies), sent
 
 
+def _agreed(rows):
+    rows = [r for r in rows if r.get("fit") is not None]
+    return sum((r["fit"] >= 0.5) == (r["label"] > 0) for r in rows), len(rows)
+
+
+def learn():
+    """Saves today's stars and deletes as lessons, retrains on every lesson, and says how often the score agreed."""
+    reacted = mail.reactions()
+    jobs = db.emailed(list(reacted))
+    before = {f"{r['company_id']}:{r['external_job_id']}": r["label"] for r in db.lessons()}
+    new = [{"company_id": row["company_id"], "external_job_id": row["external_job_id"], "title": row["title"],
+            "description": row["description"], "label": label, "source": "star" if label > 0 else "trash", "fit": row["fit"]}
+           for key, label in reacted.items() if (row := jobs.get(key)) and before.get(key) != label]
+    db.save_lessons(new)
+    every = db.lessons()
+    model = fit.train([(r["title"] or "", r["description"] or "", r["label"]) for r in every])
+    a, n = _agreed(new)
+    a50, n50 = _agreed([r for r in every if r.get("fit") is not None][-50:])
+    line = (f"Fit agreed with you on {a} of {n} reactions today, {a50} of {n50} over the last 50."
+            + ("" if model else f" Still learning: needs {fit.MIN_EACH} starred and {fit.MIN_EACH} deleted jobs."))
+    db.save_model(model, line)
+    return line
+
+
 def heartbeat():
     since = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
     companies = len(db.companies())
     seen = db.count("seen_jobs", first_seen_at=f"gte.{since}")
     emailed = db.count("seen_jobs", first_seen_at=f"gte.{since}", emailed="eq.true")
     bad = db.failing()
+    try:
+        fit_line = learn()
+    except Exception as e:
+        # gmail or training trouble must not stop the daily summary
+        fit_line = f"Fit model not updated today ({type(e).__name__})."
     body = (f"Watching {companies} companies.\nLast 24 hours: {seen} new postings seen, {emailed} emailed to you.\n"
-            + ("\nFailing boards:\n" + "\n".join(bad) if bad else "\nAll job boards working."))
+            + ("\nFailing boards:\n" + "\n".join(bad) if bad else "\nAll job boards working.") + f"\n\n{fit_line}")
     mail.send(mail.notice(f"Lookout daily: {emailed} sent, {len(bad)} failing", body))
     f = db.filters()
     db.prune(lambda title: flt.title_ok(title, f) or flt.title_maybe(title, f))

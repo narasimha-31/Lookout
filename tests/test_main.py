@@ -274,3 +274,36 @@ def test_weekly_audit_ignores_jobs_outside_the_us(world, monkeypatch):
     world["jd"] = {str(i): "<p>Based in Bengaluru, India. No sponsorship for this role.</p>" for i in range(1, 6)}
     main.audit()
     assert paused == []
+
+
+def test_learn_saves_lessons_and_reports_agreement(monkeypatch):
+    old = ([{"company_id": 2, "external_job_id": str(i), "title": "Data Analyst", "description": "power bi sql dashboards",
+             "label": 1, "fit": None} for i in range(25)]
+           + [{"company_id": 2, "external_job_id": f"b{i}", "title": "Research Engineer", "description": "phd physics",
+               "label": -1, "fit": None} for i in range(25)])
+    saved, models = [], []
+    monkeypatch.setattr(main.mail, "reactions", lambda: {"1:a": 1, "1:b": -1})
+    monkeypatch.setattr(main.db, "emailed", lambda keys: {
+        "1:a": {"company_id": 1, "external_job_id": "a", "title": "BI Analyst", "description": "power bi", "fit": 0.9},
+        "1:b": {"company_id": 1, "external_job_id": "b", "title": "Consultant", "description": "client lead", "fit": 0.8}})
+    monkeypatch.setattr(main.db, "lessons", lambda: old + saved)
+    monkeypatch.setattr(main.db, "save_lessons", lambda rows: saved.extend(rows))
+    monkeypatch.setattr(main.db, "save_model", lambda model, line: models.append(model))
+    line = main.learn()
+    assert sorted(r["label"] for r in saved) == [-1, 1] and models[0] is not None
+    assert line.startswith("Fit agreed with you on 1 of 2 reactions today")
+
+
+def test_heartbeat_survives_learn_failure(world, monkeypatch):
+    monkeypatch.setattr(main.db, "companies", lambda: [])
+    monkeypatch.setattr(main.db, "count", lambda *a, **k: 0)
+    monkeypatch.setattr(main.db, "failing", lambda: [])
+    monkeypatch.setattr(main.db, "prune", lambda keep: 0)
+    bodies = []
+    monkeypatch.setattr(main.mail, "send", lambda m: bodies.append(m.get_content()))
+    monkeypatch.setattr(main, "learn", lambda: 1 / 0)
+    main.heartbeat()
+    assert "Fit model not updated today (ZeroDivisionError)." in bodies[0]
+    monkeypatch.setattr(main, "learn", lambda: "Fit agreed with you on 3 of 4 reactions today")
+    main.heartbeat()
+    assert "Fit agreed with you on 3 of 4" in bodies[1]
