@@ -274,8 +274,18 @@ def years_required(text):
 
 
 def pay(text):
-    m = PAY.search(_clean(text))
-    return m.group(0).strip() if m else None
+    text = _clean(text)
+    for m in PAY.finditer(text):
+        before = re.split(r"[.\n]\s", text[max(0, m.start() - 40):m.start()])[-1]
+        after = text[m.end():m.end() + 20]
+        # "employee referral: $250" or a signing bonus is not the salary
+        if re.search(r"referral|bonus|stipend|reimburs|allowance|gift|credit", before, re.I):
+            continue
+        hourly = re.search(r"^\s*(/\s*h(ou)?r|per hour|an hour|hourly)", after, re.I)
+        amount = float(re.sub(r"[^\d.]", "", m.group(0).split("-")[0].split("–")[0].split("to")[0]) or 0)
+        if hourly or amount >= 1000 or re.search(r"\d\s*[kK]", m.group(0)):
+            return m.group(0).strip()
+    return None
 
 
 def html_to_text(raw):

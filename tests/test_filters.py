@@ -198,6 +198,8 @@ def test_pay():
     assert pay("Salary: $70,000 - $85,000 per year") == "$70,000 - $85,000"
     assert pay("Pay $25.50 to $31 hourly") == "$25.50 to $31"
     assert pay("Competitive pay") is None
+    assert pay("JR210610 Product Operations Analyst Employee referral: $250 CareBridge Health") is None
+    assert pay("Sign-on bonus $5,000. Salary range $68,000 to $90,000") == "$68,000 to $90,000"
 
 
 def test_html_to_text():
