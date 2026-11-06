@@ -70,8 +70,8 @@ def senior(title):
 
 
 def max_years(title):
-    # every role has to ask for under 3 years, "3+" is out
-    return 2
+    # "3+" is fine, 4 or more is out
+    return 3
 
 
 def title_ok(title, f):

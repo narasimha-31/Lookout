@@ -114,17 +114,17 @@ def test_experience_cutoff(world):
     assert main.check(company(), F)[0] == 2
 
 
-def test_every_role_needs_under_three_years(world):
+def test_every_role_caps_at_three_years(world):
     world["jobs"] = [job(1, "Data Engineer"), job(2, "Data Engineer II"), job(3, "Data Analyst")]
-    world["jd"] = {"1": "<p>3 years of experience with SQL</p>", "2": "<p>2 years of experience with SQL</p>",
-                   "3": "<p>3 years of experience with SQL</p>"}
-    assert main.check(company(), F)[0] == 1
+    world["jd"] = {"1": "<p>4 years of experience with SQL</p>", "2": "<p>2 years of experience with SQL</p>",
+                   "3": "<p>3+ years of experience with SQL</p>"}
+    assert main.check(company(), F)[0] == 2
 
 
-def test_senior_titles_cap_at_two_years(world):
-    world["jobs"] = [job(1, "Senior Data Analyst"), job(2, "Sr. Analytics Analyst"), job(3, "Data Analyst")]
-    world["jd"] = {"1": "<p>3+ years of experience with SQL</p>", "2": "<p>2 years of experience with SQL</p>",
-                   "3": "<p>3 years of experience with SQL</p>"}
+def test_senior_titles_cap_at_three_years(world):
+    world["jobs"] = [job(1, "Senior Data Analyst"), job(2, "Sr. Analytics Analyst"), job(3, "Senior Data Engineer")]
+    world["jd"] = {"1": "<p>4+ years of experience with SQL</p>", "2": "<p>3 years of experience with SQL</p>",
+                   "3": "<p>Great team, SQL daily</p>"}
     assert main.check(company(), {**F, "title_exclude": []})[0] == 1
 
 
