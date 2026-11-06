@@ -651,23 +651,26 @@ def _inbox_list(c):
             for j in db.inbox(c["id"]) if j.get("id") and j.get("t")]
 
 
+AVATURE_LINK = re.compile(r'href="([^"]+/(?:Job|Folder)Detail(?:/(?:[^"?]*/)?|\?jobId=)(\d+)(?:[?&][^"]*)?)"[^>]*>\s*(.*?)\s*</a>', re.S)
+AVATURE_WHERE = re.compile(r'(?:list-item-location">|subtitle--location">|Location:\s*</div>\s*<div[^>]*>|Location:"[^>]*>\s*<p>)\s*([^<]*)')
+
+
 def _avature_list(c):
-    # board is host plus locale, e.g. insperity.avature.net/en_US
+    # board is host plus locale, e.g. insperity.avature.net/en_US, or a full listing path like jobs.enel.com/en_US/careers/JobOpeningsUSA
+    url = f"https://{c['board']}" + ("" if c["board"].count("/") > 1 else "/careers/SearchJobs")
     jobs, seen = [], set()
     while len(jobs) < _cap(c):
-        page = http("GET", f"https://{c['board']}/careers/SearchJobs", params={"jobOffset": len(seen)}, headers={"Accept": "text/html"}).text
-        # newer sites use article cards, older ones list items
-        cards = re.findall(r'<article class="article article--result">(.*?)</article>|<li role="listitem" class="jobResultItem[^"]*">(.*?)</li>', page, re.S)
-        cards = [a or b for a, b in cards]
+        page = http("GET", url, params={"jobOffset": len(seen)}, headers={"Accept": "text/html"}).text
+        # cards are article or div blocks on newer sites, list items on older ones
         new = 0
-        for card in cards:
-            link = re.search(r'href="([^"]+/(?:Job|Folder)Detail/[^"]*?(\d+))"[^>]*>\s*(.*?)\s*</a>', card, re.S)
+        for card in re.split(r'class="article article--result|class="jobResultItem', page)[1:]:
+            link = AVATURE_LINK.search(card)
             if not link or link[2] in seen:
                 continue
             seen.add(link[2])
             new += 1
-            where = re.search(r'list-item-location">([^<]*)', card)
-            jobs.append(Job(link[2], html.unescape(link[3]), html.unescape(where[1].strip()) if where else "", link[1]))
+            where = AVATURE_WHERE.search(card)
+            jobs.append(Job(link[2], html.unescape(link[3]), " ".join(html.unescape(where[1]).split()) if where else "", link[1]))
         if not new:
             return jobs
     return jobs
@@ -677,7 +680,8 @@ def _avature_detail(c, job):
     page = http("GET", job.url, headers={"Accept": "text/html"}).text
     start = max(page.find("tf_replaceFieldVideoTokens"), page.find('class="jobDetail'))
     if start < 0:
-        return ""
+        # newer sites split the posting into detail sections
+        return "".join(re.findall(r'<article class="article article--details.*?</article>', page, re.S))
     start = page.find(">", start) + 1
     ends = [k for k in (page.find('class="article__content"', start), page.find("ApplyFlowCheck", start)) if k > 0]
     return page[start:page.rfind("<", start, min(ends) if ends else len(page))]
