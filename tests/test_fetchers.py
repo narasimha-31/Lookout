@@ -529,3 +529,44 @@ def test_selectminds_search_pages(monkeypatch):
                                                      "/jobs/search": Resp(text=first)}, calls))
     jobs = fetchers.fetch_list({"platform": "selectminds", "board": "x.referrals.selectminds.com/ETP"})
     assert [(j.id, j.title, j.location) for j in jobs] == [("2", "Data & Analyst", "BEAUMONT, Texas"), ("1", "Data & Analyst", "BEAUMONT, Texas")]
+
+
+def test_dejobs(monkeypatch):
+    calls = []
+    page = lambda kw: Resp({"jobs": [{"guid": "AB12", "title_exact": "GIS Analyst", "location_exact": "Boston, MA",
+                                      "description": "Hi"}] if kw["params"]["page"] == 1 else [],
+                            "pagination": {"has_more_pages": kw["params"]["page"] == 1}})
+    monkeypatch.setattr(fetchers, "http", fake_http({"jobsyn.org": page}, calls))
+    c = {"platform": "dejobs", "board": "aecom.jobs"}
+    jobs = fetchers.fetch_list(c)
+    assert len(jobs) == 1 and calls[0][2]["headers"] == {"X-Origin": "aecom.jobs"}
+    assert jobs[0].url == "https://aecom.jobs/AB12/job/" and fetchers.fetch_detail(c, jobs[0]) == "Hi"
+
+
+def test_csod(monkeypatch):
+    calls = []
+    monkeypatch.setattr(fetchers, "http", fake_http({
+        "/careersite/23/home": Resp(text='{"cloud":"https://us.api.csod.com/","token":"tok"}'),
+        "rec-job-search": Resp({"data": {"totalCount": 1, "requisitions": [
+            {"requisitionId": 5, "displayJobTitle": "Data Analyst", "locations": [{"city": "Danbury", "state": "CT", "country": "US"}],
+             "externalDescription": "Hi"}]}}),
+    }, calls))
+    c = {"platform": "csod", "board": "linde.csod.com/23"}
+    jobs = fetchers.fetch_list(c)
+    assert calls[1][2]["headers"] == {"Authorization": "Bearer tok"}
+    assert jobs[0].location == "Danbury, CT, US" and jobs[0].url.endswith("/requisition/5?c=linde")
+
+
+def test_tbe(monkeypatch):
+    calls = []
+    card = ('<h4 class="oracletaleocwsv2-head-title"><a href="https://h/phh03/ats/careers/v2/viewRequisition?org=X&amp;cws=1&amp;rid=7" '
+            'class="viewJobLink">Data Analyst</a></h4>\n<div tabindex="0" >Finance</div>\n<div tabindex="0" >Chico</div>\n</div>\n'
+            '<!--/.accordion-head-info -->')
+    monkeypatch.setattr(fetchers, "http", fake_http({
+        "searchResults": lambda kw: Resp(text="" if "rowFrom" in kw["params"] else card),
+        "viewRequisition": Resp(text='<div name="cwsJobDescription" class="x"><p>Hi</p></div><link rel="stylesheet">'),
+    }, calls))
+    c = {"platform": "tbe", "board": "h/phh03/X/1"}
+    jobs = fetchers.fetch_list(c)
+    assert [(j.id, j.title, j.location) for j in jobs] == [("7", "Data Analyst", "Finance, Chico")]
+    assert fetchers.fetch_detail(c, jobs[0]) == "<p>Hi</p></div>"

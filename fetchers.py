@@ -773,17 +773,87 @@ def _selectminds_list(c):
     return sorted(jobs.values(), key=lambda j: int(j.id), reverse=True)
 
 
+def _dejobs_list(c):
+    # directemployers ".jobs" sites, e.g. aecom.jobs; the search api serves 10 a page, newest first
+    jobs, page = [], 1
+    while len(jobs) < _cap(c):
+        data = http("GET", "https://prod-search-api.jobsyn.org/api/v1/solr/search", headers={"X-Origin": c["board"]},
+                    params={"page": page, "num_items": 10, "location": "United States"}).json()
+        posts = data.get("jobs") or []
+        jobs += [Job(p["guid"], p.get("title_exact") or "", p.get("location_exact") or "",
+                     f"https://{c['board']}/{p['guid']}/job/", {"description": p.get("description") or ""}) for p in posts]
+        if not posts or not (data.get("pagination") or {}).get("has_more_pages"):
+            return jobs
+        page += 1
+    return jobs
+
+
+def _csod_list(c):
+    # board is host/career site id, e.g. linde.csod.com/23; the page hands out a public search token
+    host, site = c["board"].split("/")
+    corp = host.split(".")[0]
+    page = http("GET", f"https://{host}/ux/ats/careersite/{site}/home", params={"c": corp}, headers={"Accept": "text/html"}).text
+    token, cloud = re.search(r'"token":"([^"]+)"', page)[1], re.search(r'"cloud":"([^"]+)"', page)[1]
+    jobs, num = [], 1
+    while len(jobs) < _cap(c):
+        body = {"careerSiteId": int(site), "careerSitePageId": int(site), "pageNumber": num, "pageSize": 100, "cultureId": 1,
+                "searchText": "", "cultureName": "en-US", "states": [], "countryCodes": [], "cities": [], "placeID": "",
+                "radius": None, "postingsWithinDays": None, "customFieldCheckboxKeys": [], "customFieldDropdowns": [],
+                "customFieldRadios": []}
+        data = http("POST", f"{cloud}rec-job-search/external/jobs", json=body,
+                    headers={"Authorization": f"Bearer {token}"}).json().get("data") or {}
+        posts = data.get("requisitions") or []
+        for p in posts:
+            where = "; ".join(", ".join(x for x in (l.get("city"), l.get("state"), l.get("country")) if x) for l in p.get("locations") or [])
+            jobs.append(Job(str(p["requisitionId"]), p.get("displayJobTitle") or "", where,
+                            f"https://{host}/ux/ats/careersite/{site}/home/requisition/{p['requisitionId']}?c={corp}",
+                            {"description": p.get("externalDescription") or ""}))
+        if not posts or len(jobs) >= data.get("totalCount", 0):
+            return jobs
+        num += 1
+    return jobs
+
+
+def _tbe_list(c):
+    # taleo business edition, board is host/instance/org/cws, e.g. phh.tbe.taleo.net/phh03/SIERRANEVADABREWINGCO/39
+    host, inst, org, cws = c["board"].split("/")
+    base = f"https://{host}/{inst}/ats/careers/v2/searchResults"
+    jobs, seen = [], set()
+    while len(jobs) < _cap(c):
+        params = {"org": org, "cws": cws, **({"act": "next", "rowFrom": len(seen)} if seen else {})}
+        page = http("GET", base, params=params, headers={"Accept": "text/html"}).text
+        found = re.findall(r'<a href="([^"]+rid=(\d+))" class="viewJobLink">(.*?)</a></h4>(.*?)<!--/.accordion-head-info', page, re.S)
+        new = [f for f in found if f[1] not in seen]
+        for url, rid, title, info in new:
+            seen.add(rid)
+            # each org picks its own fields here (place, department, job type), so keep them all
+            where = ", ".join(html.unescape(x.strip()) for x in re.findall(r"<div[^>]*>(.*?)</div>", info) if x.strip())
+            jobs.append(Job(rid, html.unescape(title.strip()), where, html.unescape(url)))
+        if not new:
+            return jobs
+    return jobs
+
+
+def _tbe_detail(c, job):
+    page = http("GET", job.url, headers={"Accept": "text/html"}).text
+    start = page.find('name="cwsJobDescription"')
+    if start < 0:
+        return ""
+    start = page.find(">", start) + 1
+    return page[start:page.find("<link", start)]
+
+
 LIST = {"greenhouse": _greenhouse_list, "lever": _lever_list, "ashby": _ashby_list, "workday": _workday_list,
         "ukg": _ukg_list, "workable": _workable_list, "oracle": _oracle_list, "smartrecruiters": _smartrecruiters_list,
         "consider": _consider_list, "getro": _getro_list, "jibe": _jibe_list, "eightfold": _eightfold_list,
         "rss": _rss_list, "amazon": _amazon_list, "phenom": _phenom_list, "sfxml": _sfxml_list, "bamboohr": _bamboohr_list, "sitemap": _sitemap_list, "icims": _icims_list, "rippling": _rippling_list, "selectminds": _selectminds_list,
-        "paylocity": _paylocity_list, "recruitee": _recruitee_list, "jazzhr": _jazzhr_list, "avature": _avature_list, "taleo": _taleo_list, "email": _email_list, "inbox": _inbox_list, "wpgh": _wpgh_list, "jobvite": _jobvite_list, "pinpoint": _pinpoint_list}
+        "paylocity": _paylocity_list, "recruitee": _recruitee_list, "jazzhr": _jazzhr_list, "avature": _avature_list, "taleo": _taleo_list, "email": _email_list, "inbox": _inbox_list, "wpgh": _wpgh_list, "jobvite": _jobvite_list, "pinpoint": _pinpoint_list, "dejobs": _dejobs_list, "csod": _csod_list, "tbe": _tbe_list}
 DETAIL = {"greenhouse": _greenhouse_detail, "lever": _lever_detail, "ashby": _ashby_detail, "workday": _workday_detail,
           "ukg": _ukg_detail, "workable": _workable_detail, "oracle": _oracle_detail,
           "smartrecruiters": _smartrecruiters_detail, "consider": _consider_detail, "getro": _getro_detail,
           "jibe": _jibe_detail, "eightfold": _eightfold_detail, "rss": _rss_detail,
           "amazon": _amazon_detail, "phenom": _phenom_detail, "sfxml": _sfxml_detail, "bamboohr": _bamboohr_detail, "sitemap": _sitemap_detail, "icims": _icims_detail, "rippling": _rippling_detail, "selectminds": _selectminds_detail,
-          "paylocity": _sitemap_detail, "recruitee": _rss_detail, "jazzhr": _sitemap_detail, "avature": _avature_detail, "taleo": _taleo_detail, "email": lambda c, job: "", "inbox": lambda c, job: "", "wpgh": _wpgh_detail, "jobvite": _sitemap_detail, "pinpoint": _rss_detail}
+          "paylocity": _sitemap_detail, "recruitee": _rss_detail, "jazzhr": _sitemap_detail, "avature": _avature_detail, "taleo": _taleo_detail, "email": lambda c, job: "", "inbox": lambda c, job: "", "wpgh": _wpgh_detail, "jobvite": _sitemap_detail, "pinpoint": _rss_detail, "dejobs": _rss_detail, "csod": _rss_detail, "tbe": _tbe_detail}
 
 
 def fetch_list(company, newest=None):
