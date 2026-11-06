@@ -71,6 +71,11 @@ def mark_first_run(company_id):
          json={"first_run_done": True})
 
 
+def paused(note_start):
+    return http("GET", _url("companies"), headers=_headers(), params={
+        "active": "eq.false", "note": f"like.{note_start}*", "order": "name"}).json()
+
+
 def pause(company_id, note):
     http("PATCH", _url("companies"), headers=_headers("return=minimal"), params={"id": f"eq.{company_id}"},
          json={"active": False, "note": note})

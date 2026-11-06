@@ -42,6 +42,25 @@ def review():
     print(f"checked {len(low)}, {len(empty)} with no data roles")
 
 
+def paused_check():
+    # paused companies stay off, this only says which ones opened data roles so they can be turned back on by hand
+    f = db.filters()
+    companies = db.paused("paused: no data roles")
+
+    def safe(c):
+        try:
+            return data_roles(c, f)
+        except Exception:
+            return []
+    with ThreadPoolExecutor(8) as pool:
+        found = [(c, jobs) for c, jobs in zip(companies, pool.map(safe, companies)) if jobs]
+    lines = lambda jobs: "\n".join(f"  {j.title} | {j.location or 'location not listed'}\n  {j.url}" for j in jobs[:10])
+    body = "\n\n".join(f"{c['name']} ({len(jobs)}):\n{lines(jobs)}" for c, jobs in found)
+    mail.send(mail.notice(f"Lookout paused check: {len(found)} of {len(companies)} have data roles",
+                          body or "None of the paused companies have data roles open."))
+    print(f"checked {len(companies)} paused, {len(found)} with data roles")
+
+
 if __name__ == "__main__":
     load_env()
-    review()
+    paused_check() if sys.argv[1:] == ["paused"] else review()
