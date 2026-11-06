@@ -45,10 +45,10 @@ def job(i, title="Data Analyst", loc="Houston, TX"):
     return Job(str(i), title, loc, f"https://x/{i}")
 
 
-def test_first_run_saves_all_and_sends_nothing(world):
+def test_first_run_saves_matching_titles_and_sends_nothing(world):
     world["jobs"] = [job(1), job(2, "Welder")]
     assert main.check(company(first_run_done=False), F)[:2] == (0, 2)
-    assert len(world["saved"]) == 2 and world["sent"] == [] and world["marked"] == [1]
+    assert [r["external_job_id"] for r in world["saved"]] == ["1"] and world["sent"] == [] and world["marked"] == [1]
 
 
 def test_new_matching_job_is_emailed_once(world):
@@ -62,7 +62,8 @@ def test_rejected_jobs_are_saved_not_emailed(world):
     world["jobs"] = [job(1), job(2), job(3, "Welder"), job(4, loc="Pune, India")]
     world["jd"] = {"1": "<p>4+ years of experience</p>", "2": "<p>No sponsorship available</p>"}
     assert main.check(company(), F)[:2] == (0, 4)
-    assert {r["external_job_id"] for r in world["saved"]} == {"1", "2", "3", "4"}
+    # a title that can never match is not stored at all
+    assert {r["external_job_id"] for r in world["saved"]} == {"1", "2", "4"}
     assert not any(r["emailed"] for r in world["saved"])
 
 
