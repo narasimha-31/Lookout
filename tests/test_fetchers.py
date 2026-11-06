@@ -278,6 +278,17 @@ def test_bamboohr(monkeypatch):
     assert fetchers.fetch_detail(c, j) == "<p>JD</p>"
 
 
+def test_sitemap_state_zip(monkeypatch):
+    urls = ("<urlset><url><loc>https://jobs.engie.com/job/HOUSTON-Trading-Support-Analyst-II-TX-77056/1375953355/</loc></url>"
+            "<url><loc>https://jobs.engie.com/job/Madrid-TPI-Settlement-Analyst-28042/1375109055/</loc></url></urlset>")
+    monkeypatch.setattr(fetchers, "http", fake_http({"sitemap.xml": Resp(text=urls)}, []))
+    c = {"platform": "sitemap", "board": "jobs.engie.com/sitemap.xml"}
+    jobs = fetchers.fetch_list(c)
+    assert ("HOUSTON Trading Support Analyst II", "TX, United States") in [(j.title, j.location) for j in jobs]
+    c["overrides"] = {"us_only": True}
+    assert [j.location for j in fetchers.fetch_list(c)] == ["TX, United States"]
+
+
 def test_sitemap(monkeypatch):
     calls = []
     index = "<sitemapindex><sitemap><loc>https://x.com/page-sitemap.xml</loc></sitemap><sitemap><loc>https://x.com/job_listing-sitemap.xml</loc></sitemap></sitemapindex>"

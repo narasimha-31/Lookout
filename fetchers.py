@@ -495,7 +495,15 @@ def _sitemap_list(c):
         parts = [p for p in reversed(url.rstrip("/").split("/")[3:]) if re.search(r"[a-z]", p, re.I) and p.lower() not in ("job", "jobs")]
         parts = [p for p in parts if not GUID.fullmatch(p)] or parts
         slug = next((p for p in parts if not STATE_END.search(p)), parts[0] if parts else "")
-        jobs.append(Job(url, unquote(re.sub(r"^\d+-", "", slug)).replace("-", " "), "", url))
+        title = html.unescape(unquote(re.sub(r"^\d+-", "", slug)))
+        # successfactors slugs end in the state and zip, "HOUSTON-Trading-Analyst-TX-77056"
+        place = re.search(r"-([a-z]{2})-\d{5}$", title, re.I)
+        state = place and STATE_END.search("-" + place[1])
+        if state:
+            title = title[:place.start()]
+        elif (c.get("overrides") or {}).get("us_only"):
+            continue
+        jobs.append(Job(url, title.replace("-", " "), f"{place[1].upper()}, United States" if state else "", url))
     return jobs
 
 
