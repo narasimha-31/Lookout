@@ -64,11 +64,6 @@ def _roles(title, f):
                 yield role, bool(_matches(f["title_include"] if role in ("analyst", "planner") else CORE_DOMAINS, title))
 
 
-def senior(title):
-    # senior titles still count when the description asks for 3 years or less
-    return bool(re.search(r"\b(senior|sr)\b", title, re.I))
-
-
 def max_years(title):
     # data engineers stay at 2 years or less, other roles take "3+"
     return 2 if re.search(r"\bengineer", title, re.I) else 3

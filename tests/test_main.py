@@ -125,7 +125,8 @@ def test_senior_titles_cap_at_three_years(world):
     world["jobs"] = [job(1, "Senior Data Analyst"), job(2, "Sr. Analytics Analyst"), job(3, "Senior Data Engineer")]
     world["jd"] = {"1": "<p>4+ years of experience with SQL</p>", "2": "<p>3 years of experience with SQL</p>",
                    "3": "<p>Great team, SQL daily</p>"}
-    assert main.check(company(), {**F, "title_exclude": []})[0] == 1
+    # no years stated still goes out, the reader may have missed them
+    assert main.check(company(), {**F, "title_exclude": []})[0] == 2
 
 
 def test_data_title_without_data_tools_is_skipped(world):
@@ -262,8 +263,9 @@ def test_senior_titles_need_a_low_years_ask(world):
     world["jobs"] = [job(1, "Senior Data Analyst"), job(2, "Sr. Data Analyst"), job(3, "Senior Data Analyst II")]
     world["jd"] = {"1": "<p>2-3 years of experience in SQL</p>", "2": "<p>5+ years of experience</p>", "3": "<p>Great team, Python daily</p>"}
     f = {**F, "title_exclude": []}
-    assert main.check(company(), f)[0] == 1
-    assert world["sent"] == ["New role at Acme: Senior Data Analyst, Houston, TX"]
+    assert main.check(company(), f)[0] == 2
+    assert world["sent"] == ["New role at Acme: Senior Data Analyst, Houston, TX",
+                             "New role at Acme: Senior Data Analyst II, Houston, TX"]
 
 
 def test_weekly_audit_ignores_jobs_outside_the_us(world, monkeypatch):
