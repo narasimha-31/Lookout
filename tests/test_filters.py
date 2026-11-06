@@ -162,6 +162,9 @@ def test_abroad():
     assert abroad("Houston, TX", "This role can be based in Houston or Bengaluru, India.", F)
     assert not abroad("", "Based at our office in Houston, TX.", F)
     assert not abroad("", "This role sits in Texas.", F)
+    caps = {**F, "locations_blocked": ["CAN", "IND"]}
+    assert not abroad("MN, United States", "Located in a bustling town, you can drive to lunch.", caps)
+    assert abroad("", "Work location: Toronto, CAN.", caps)
 
 
 def test_student_only():

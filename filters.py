@@ -12,7 +12,8 @@ PAY = re.compile(rf"\$\s?{NUM}\s*[kK]?(?:\s*(?:-|–|to)\s*\$?\s?{NUM}\s*[kK]?)?
 
 
 def _matches(terms, text, flags=re.I):
-    return [t for t in terms if re.search(r"(?<!\w)" + re.escape(t) + r"(?!\w)", text, flags)]
+    # codes like CAN and IND only count in capitals, not "can" or "ind"
+    return [t for t in terms if re.search(r"(?<!\w)" + re.escape(t) + r"(?!\w)", text, 0 if t.isupper() else flags)]
 
 
 ROLES = ["analyst", "engineer", "developer", "specialist", "associate", "planner", "coordinator", "buyer", "steward", "intern",
