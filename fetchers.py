@@ -340,8 +340,9 @@ def _getro_detail(c, job):
 
 def _rss_list(c):
     # successfactors career sites publish their newest jobs as rss
-    feed = http("GET", f"https://{c['board']}/services/rss/job/?locale=en_US&keywords=",
-                headers={"Accept": "application/rss+xml"}).text
+    # some sites block /services/ in robots but serve the same feed as sitemap.xml
+    url = f"https://{c['board']}" if c["board"].endswith(".xml") else f"https://{c['board']}/services/rss/job/?locale=en_US&keywords="
+    feed = http("GET", url, headers={"Accept": "application/rss+xml"}).text
     jobs = []
     for item in re.findall(r"<item>(.*?)</item>", feed, re.S):
         get = lambda tag: (re.search(rf"<{tag}>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?</{tag}>", item, re.S) or [None, ""])[1].strip()
@@ -361,9 +362,11 @@ def _rss_detail(c, job):
 
 def _jibe_list(c):
     jobs, page = [], 1
+    # one portal can hold several companies, each a brand
+    brand = (c.get("overrides") or {}).get("jibe_brand")
     while True:
         data = http("GET", f"https://{c['board']}/api/jobs?page={page}&limit=100&sortBy=posted_date"
-                           "&descending=true&internal=false").json()
+                           "&descending=true&internal=false", params={"brand": brand} if brand else None).json()
         posts = [p["data"] for p in data.get("jobs") or []]
         jobs += [Job(str(p.get("req_id") or p["slug"]), p["title"], p.get("full_location") or "",
                      f"https://{c['board']}/careers-home/jobs/{p['slug']}", p) for p in posts]
@@ -487,7 +490,9 @@ def _sitemap_list(c):
     for m in maps:
         page = index if m == f"https://{c['board']}" else http("GET", m).text
         urls += re.findall(r"<url>\s*<loc>(.*?)</loc>(?:(?:(?!</url>).)*?<lastmod>(.*?)</lastmod>)?", page, re.S)
-    urls = sorted({u: d for u, d in urls if "/job/" in u or "/jobdetails/" in u}.items(), key=lambda x: x[1], reverse=True)
+    # a group-wide sitemap keeps each company under its own path
+    path = (c.get("overrides") or {}).get("sitemap_path", "")
+    urls = sorted({u: d for u, d in urls if ("/job/" in u or "/jobdetails/" in u) and path in u}.items(), key=lambda x: x[1], reverse=True)
     jobs = []
     for url, _ in urls[:int(min(_cap(c), len(urls)))]:
         # the title is the last part with letters, ".../job/plymouth/data-analyst/34088/1027..." included,
@@ -710,17 +715,36 @@ def _recruitee_list(c):
                 {"description": (p.get("description") or "") + (p.get("requirements") or "")}) for p in posts]
 
 
+
+def _wpgh_list(c):
+    # board is a wordpress careers page mirroring greenhouse jobs, e.g. arevonenergy.com/careers
+    page = http("GET", f"https://{c['board']}/", headers={"Accept": "text/html"}).text
+    found = re.findall(r'data-gid="(\d+)">\s*<a href="([^"]+)">\s*<strong class="title">(.*?)</strong>\s*'
+                       r'<span class="subtitle">(.*?)</span>', page, re.S)
+    return [Job(jid, html.unescape(title.strip()), html.unescape(where.strip()), url) for jid, url, title, where in found]
+
+
+def _wpgh_detail(c, job):
+    page = http("GET", job.url, headers={"Accept": "text/html"}).text
+    start = page.find("__content-col__content")
+    if start < 0:
+        return ""
+    start = page.find(">", start) + 1
+    end = page.find("__sidebar-col", start)
+    return page[start:page.rfind("<", start, end if end > 0 else len(page))]
+
+
 LIST = {"greenhouse": _greenhouse_list, "lever": _lever_list, "ashby": _ashby_list, "workday": _workday_list,
         "ukg": _ukg_list, "workable": _workable_list, "oracle": _oracle_list, "smartrecruiters": _smartrecruiters_list,
         "consider": _consider_list, "getro": _getro_list, "jibe": _jibe_list, "eightfold": _eightfold_list,
         "rss": _rss_list, "amazon": _amazon_list, "phenom": _phenom_list, "sfxml": _sfxml_list, "bamboohr": _bamboohr_list, "sitemap": _sitemap_list, "icims": _icims_list, "rippling": _rippling_list, "selectminds": _selectminds_list,
-        "paylocity": _paylocity_list, "recruitee": _recruitee_list, "jazzhr": _jazzhr_list, "avature": _avature_list, "taleo": _taleo_list, "email": _email_list, "inbox": _inbox_list}
+        "paylocity": _paylocity_list, "recruitee": _recruitee_list, "jazzhr": _jazzhr_list, "avature": _avature_list, "taleo": _taleo_list, "email": _email_list, "inbox": _inbox_list, "wpgh": _wpgh_list}
 DETAIL = {"greenhouse": _greenhouse_detail, "lever": _lever_detail, "ashby": _ashby_detail, "workday": _workday_detail,
           "ukg": _ukg_detail, "workable": _workable_detail, "oracle": _oracle_detail,
           "smartrecruiters": _smartrecruiters_detail, "consider": _consider_detail, "getro": _getro_detail,
           "jibe": _jibe_detail, "eightfold": _eightfold_detail, "rss": _rss_detail,
           "amazon": _amazon_detail, "phenom": _phenom_detail, "sfxml": _sfxml_detail, "bamboohr": _bamboohr_detail, "sitemap": _sitemap_detail, "icims": _icims_detail, "rippling": _sitemap_detail, "selectminds": _selectminds_detail,
-          "paylocity": _sitemap_detail, "recruitee": _rss_detail, "jazzhr": _sitemap_detail, "avature": _avature_detail, "taleo": _taleo_detail, "email": lambda c, job: "", "inbox": lambda c, job: ""}
+          "paylocity": _sitemap_detail, "recruitee": _rss_detail, "jazzhr": _sitemap_detail, "avature": _avature_detail, "taleo": _taleo_detail, "email": lambda c, job: "", "inbox": lambda c, job: "", "wpgh": _wpgh_detail}
 
 
 def fetch_list(company, newest=None):

@@ -450,3 +450,49 @@ def test_inbox_jobs_from_the_browser_button(monkeypatch):
     jobs = fetchers.fetch_list({"platform": "inbox", "id": 7, "board": "tesla.com/careers"})
     assert [(j.id, j.title, j.location, j.url) for j in jobs] == [
         ("280882", "Supply Chain Data Analyst", "Palo Alto, CA", "https://www.tesla.com/careers/search/job/supply-chain-data-analyst-280882")]
+
+
+def test_wpgh(monkeypatch):
+    calls = []
+    monkeypatch.setattr(fetchers, "http", fake_http({
+        "/careers/rto-policy-manager/": Resp(text='<div class="x__content-col__content"><p>Do policy</p></div>'
+                                                  '<div class="x__sidebar-col">apply</div>'),
+        "/careers/": Resp(text='<li data-oid="209" data-gid="5247176007"> <a href="https://a.com/careers/rto-policy-manager/">'
+                               ' <strong class="title">RTO &amp; Policy Manager</strong> <span class="subtitle">Scottsdale, AZ</span>'),
+    }, calls))
+    c = {"platform": "wpgh", "board": "a.com/careers"}
+    jobs = fetchers.fetch_list(c)
+    assert jobs[0].id == "5247176007" and jobs[0].title == "RTO & Policy Manager" and jobs[0].location == "Scottsdale, AZ"
+    assert fetchers.fetch_detail(c, jobs[0]) == "<p>Do policy</p></div>"
+
+
+def test_rss_feed_at_sitemap(monkeypatch):
+    calls = []
+    monkeypatch.setattr(fetchers, "http", fake_http({
+        "sitemap.xml": Resp(text="<item><title>Data Analyst (Kingsport, TN, US, 37660)</title>"
+                                 "<link>https://jobs.x.com/job/Kingsport-Data-Analyst/1439680700/</link>"
+                                 "<description>hi</description></item>"),
+    }, calls))
+    jobs = fetchers.fetch_list({"platform": "rss", "board": "jobs.x.com/sitemap.xml"})
+    assert calls[0][1] == "https://jobs.x.com/sitemap.xml"
+    assert jobs[0].id == "1439680700" and jobs[0].location == "Kingsport, TN"
+
+
+def test_jibe_brand(monkeypatch):
+    calls = []
+    monkeypatch.setattr(fetchers, "http", fake_http({
+        "/api/jobs": Resp({"totalCount": 1, "jobs": [{"data": {"req_id": "38", "slug": "38", "title": "Data Analyst"}}]}),
+    }, calls))
+    c = {"platform": "jibe", "board": "j.com", "overrides": {"jibe_brand": "Reyes Coca-Cola Bottling"}}
+    assert fetchers.fetch_list(c)[0].id == "38"
+    assert calls[0][2]["params"] == {"brand": "Reyes Coca-Cola Bottling"}
+
+
+def test_sitemap_path(monkeypatch):
+    calls = []
+    monkeypatch.setattr(fetchers, "http", fake_http({
+        "sitemap.xml": Resp(text="<url><loc>https://v.com/EA/job/Reston-Data-Analyst-VA-20190/1/</loc></url>"
+                                 "<url><loc>https://v.com/Audi/job/Ingolstadt-Mechanic/2/</loc></url>"),
+    }, calls))
+    jobs = fetchers.fetch_list({"platform": "sitemap", "board": "v.com/sitemap.xml", "overrides": {"sitemap_path": "/EA/"}})
+    assert [j.title for j in jobs] == ["Reston Data Analyst"]
