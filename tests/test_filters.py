@@ -12,6 +12,11 @@ F = {
 }
 
 
+def test_consultant_titles():
+    assert title_ok("Data Consultant", F) and title_ok("Sr. BI Consultant", {**F, "title_exclude": []})
+    assert not title_ok("Management Consultant", F) and not title_ok("IT Consultant", F)
+
+
 def test_titles():
     good = ["Data Analyst", "Associate Data Engineer", "Supply Chain Analyst - Leadership Program", "Analytics Engineer",
             "Analyst, Supply Chain Planning", "Financial Data Analyst", "Finance Data Analyst II", "Business Intelligence Analyst - Marketing",

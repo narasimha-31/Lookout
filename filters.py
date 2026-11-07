@@ -17,7 +17,7 @@ def _matches(terms, text, flags=re.I):
 
 
 ROLES = ["analyst", "engineer", "developer", "specialist", "associate", "planner", "coordinator", "buyer", "steward", "intern",
-         "internship", "co-op", "technician"]
+         "internship", "co-op", "technician", "consultant"]
 # gis data entry and gis technician jobs are real entry gis work
 GIS_OK = ["data entry", "technician"]
 # engineers and developers only count for data work, not "Data Center Engineer" style titles
