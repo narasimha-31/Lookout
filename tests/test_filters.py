@@ -1,4 +1,4 @@
-from filters import (abroad, dealbreakers, html_to_text, location_ok, needs_skills, years_required, pay, skills_ok, student_only,
+from filters import (software_required, abroad, dealbreakers, html_to_text, location_ok, needs_skills, years_required, pay, skills_ok, student_only,
                      title_maybe, title_ok)
 
 F = {
@@ -229,3 +229,17 @@ def test_pay():
 def test_html_to_text():
     out = html_to_text("<p>Hi&amp;bye</p><ul><li>SQL</li><li>Python</li></ul><script>x()</script>")
     assert out == "Hi&bye\n\n- SQL\n- Python"
+
+
+def test_software_languages_only_when_required():
+    assert software_required("Requirements:\n- SQL, Python, and Java")
+    assert software_required("Must have strong C++ skills.")
+    assert not software_required("Programming languages (eg, Python, C#, Java, or SQL).")
+    assert not software_required("Requirements:\n- SQL and Python\nPreferred Qualifications:\n- Java and C++")
+    assert not software_required("Java experience is a plus.")
+    assert not software_required("Grade C or better in statistics. Go-to partner for reporting.")
+
+
+def test_new_tools_and_weak_ones():
+    assert skills_ok("Build Spotfire dashboards") and skills_ok("Python/R") and skills_ok("Alteryx workflows")
+    assert not skills_ok("AWS and Azure, Excel and SAP") and not skills_ok("Our R&D team")

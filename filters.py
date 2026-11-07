@@ -33,7 +33,15 @@ WORK = ["business intelligence", "analytics",
         "data analysis", "data engineering"]
 # real data tools from the resume, excel or sap alone is clerical work
 SKILLS = ["sql", "python", "power bi", "power query", "dax", "tableau", "looker", "snowflake", "etl", "pandas", "postgresql",
-          "sql server", "bigquery", "airflow", "dbt", "kafka", "gis", "esri", "qgis", "postgis", "arcgis", "databricks"]
+          "sql server", "bigquery", "airflow", "dbt", "kafka", "gis", "esri", "qgis", "postgis", "arcgis", "databricks",
+          "sas", "alteryx", "spark", "pyspark", "redshift", "azure data factory", "synapse", "mysql", "qlik", "ssrs", "ssis",
+          "spotfire"]
+# a bare "R" is too common a letter, only clear uses count; aws and azure alone are like excel, not enough
+R_TOOL = re.compile(r"\bRStudio\b|\bR (programming|language|studio)\b|(?<![\w&-])R\s*/|/\s*R(?![\w&'-])")
+# core software languages; C and Go only count next to another language or the word programming
+LANGS = re.compile(r"C\+\+|C#|\bJava\b(?!\s*[Ss]cript)|\bJavaScript\b|\bTypeScript\b|\bGolang\b|\bRust\b|\bKotlin\b"
+                   r"|(?<![\w-])C(?![\w+#-])|(?<![\w-])Go(?![\w-])")
+SOFT = re.compile(r"prefer|nice to have|a plus|bonus|desired|ideally|familiarity|exposure", re.I)
 TERRITORIES = re.compile(r"puerto rico|guam|virgin islands|american samoa|mariana islands|\bPR\b(?=,? (US|USA|United States)\b|$)", re.I)
 PARTS = re.compile(r"\s[-–—|/]\s|[,()|:–—]")
 LEVEL = re.compile(r"\b([ivx]+|\d+|jr\.?|junior|entry[- ]level|level \w+)\b", re.I)
@@ -86,7 +94,22 @@ def title_maybe(title, f):
 
 
 def skills_ok(text):
-    return any(re.search(rf"(?<!\w){s}(?!\w)", text, re.I) for s in SKILLS)
+    return bool(R_TOOL.search(text)) or any(re.search(rf"(?<!\w){s}(?!\w)", text, re.I) for s in SKILLS)
+
+
+def software_required(text):
+    """The first required line asking for a core software language like Java or C++, or None."""
+    for s in (s for line in _required_lines(text) for s in _sentences(line)):
+        hits = LANGS.findall(s)
+        if not hits or SOFT.search(s):
+            continue
+        if set(hits) <= {"C", "Go"} and not re.search(r"programming|languages?|coding", s, re.I):
+            continue
+        # "Python, Java, or SQL" can be met with python or sql
+        if re.search(r"\bor\b|/|\be\.?g\b|such as|like", s, re.I) and skills_ok(s):
+            continue
+        return s
+    return None
 
 
 def _us_marked(place, f):

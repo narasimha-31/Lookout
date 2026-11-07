@@ -71,7 +71,7 @@ def check(company, f, before=None, model=None):
         years = flt.years_required(text)
         # every description has to name a real data tool, boards with no description fall back to the title
         unsure = not flt.skills_ok(text) if text else flt.needs_skills(job.title, f)
-        if (unsure or flt.dealbreakers(text, f) or flt.student_only(job.title, text) or flt.abroad(job.location, text, f)
+        if (unsure or flt.software_required(text) or flt.dealbreakers(text, f) or flt.student_only(job.title, text) or flt.abroad(job.location, text, f)
                 or (years is not None and years > flt.max_years(job.title))):
             db.save_jobs([_row(company, job)])
             continue
