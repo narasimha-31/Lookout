@@ -580,3 +580,18 @@ def test_tbe(monkeypatch):
     jobs = fetchers.fetch_list(c)
     assert [(j.id, j.title, j.location) for j in jobs] == [("7", "Data Analyst", "Finance, Chico")]
     assert fetchers.fetch_detail(c, jobs[0]) == "<p>Hi</p></div>"
+
+
+def test_yc_skips_no_sponsor_jobs(monkeypatch):
+    import html as h, json as j
+    posts = [{"id": 1, "title": "Data Analyst ", "url": "/companies/a/jobs/1", "location": "Remote (US)", "visa": "Will sponsor", "companyName": "A"},
+             {"id": 2, "title": "Data Analyst", "url": "/companies/b/jobs/2", "location": "SF", "visa": "US citizen/visa only", "companyName": "B"}]
+    page = lambda props: Resp(text=f'<div data-page="{h.escape(j.dumps({"props": props}))}"></div>')
+    monkeypatch.setattr(fetchers, "http", fake_http({
+        "/jobs/role/operations": page({"jobPostings": posts}),
+        "/companies/a/jobs/1": page({"job": {"visa": "Will sponsor", "minExperience": "1+ years", "description": "Use SQL & dbt\n\nRemote"}}),
+    }, []))
+    c = {"platform": "yc", "board": "operations"}
+    jobs = fetchers.fetch_list(c)
+    assert [(x.id, x.title, x.company) for x in jobs] == [("1", "Data Analyst", "A")]
+    assert fetchers.fetch_detail(c, jobs[0]) == "<p>Visa: Will sponsor</p><p>Experience: 1+ years</p><p>Use SQL &amp; dbt</p><p>Remote</p>"
