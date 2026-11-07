@@ -1,9 +1,9 @@
 name: heartbeat
 
-# 8am central
+# 6am central, daily summary and fit model learning
 on:
   schedule:
-    - cron: "0 14 * * *"
+    - cron: "0 12 * * *"
   workflow_dispatch:
 
 jobs:
