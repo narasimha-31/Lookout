@@ -598,3 +598,14 @@ def test_yc_skips_no_sponsor_jobs(monkeypatch):
     jobs = fetchers.fetch_list(c)
     assert [(x.id, x.title, x.company) for x in jobs] == [("1", "Data Analyst", "A")]
     assert fetchers.fetch_detail(c, jobs[0]) == "<p>Visa: Will sponsor</p><p>Experience: 1+ years</p><p>Use SQL &amp; dbt</p><p>Remote</p>"
+
+
+def test_dejobs_one_company_on_shared_site(monkeypatch):
+    calls = []
+    post = {"guid": "AB12", "title_exact": "Data Analyst", "location_exact": "Houston, TX", "city_exact": "Houston",
+            "state_short": "TX", "title_slug": "data-analyst", "description": "<p>SQL</p>"}
+    monkeypatch.setattr(fetchers, "http", fake_http({"solr/search": Resp({"jobs": [post], "pagination": {"has_more_pages": False}})}, calls))
+    c = {"platform": "dejobs", "board": "dejobs.org", "overrides": {"dejobs_company": "HCA Healthcare"}}
+    jobs = fetchers.fetch_list(c)
+    assert jobs[0].url == "https://dejobs.org/houston-tx/data-analyst/AB12/job/"
+    assert calls[0][2]["params"]["company"] == "HCA Healthcare" and calls[0][2]["params"]["sort"] == "date"

@@ -786,15 +786,28 @@ def _selectminds_list(c):
     return sorted(jobs.values(), key=lambda j: int(j.id), reverse=True)
 
 
+DEJOBS_TITLES = "title:(analyst OR data OR analytics OR intelligence OR reporting OR planner OR consultant OR intern OR buyer OR gis)"
+
+
+def _dejobs_link(p):
+    # dejobs.org links need the place and title, "houston-tx/data-analyst/<guid>/job/"
+    place = re.sub(r"[^a-z0-9]+", "-", f"{p.get('city_exact') or ''} {p.get('state_short') or ''}".lower()).strip("-")
+    return f"https://dejobs.org/{place}/{p.get('title_slug')}/{p['guid']}/job/"
+
+
 def _dejobs_list(c):
     # directemployers ".jobs" sites, e.g. aecom.jobs; the search api serves 10 a page, newest first
+    # board "dejobs.org" with a dejobs_company override follows one company on the shared site, data titles only
+    company = (c.get("overrides") or {}).get("dejobs_company")
+    extra = {"company": company, "q": DEJOBS_TITLES, "sort": "date"} if company else {}
     jobs, page = [], 1
     while len(jobs) < _cap(c):
         data = http("GET", "https://prod-search-api.jobsyn.org/api/v1/solr/search", headers={"X-Origin": c["board"]},
-                    params={"page": page, "num_items": 10, "location": "United States"}).json()
+                    params={"page": page, "num_items": 10, "location": "United States", **extra}).json()
         posts = data.get("jobs") or []
         jobs += [Job(p["guid"], p.get("title_exact") or "", p.get("location_exact") or "",
-                     f"https://{c['board']}/{p['guid']}/job/", {"description": p.get("description") or ""}) for p in posts]
+                     _dejobs_link(p) if company else f"https://{c['board']}/{p['guid']}/job/",
+                     {"description": p.get("description") or ""}) for p in posts]
         if not posts or not (data.get("pagination") or {}).get("has_more_pages"):
             return jobs
         page += 1
