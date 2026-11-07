@@ -357,7 +357,9 @@ def _rss_list(c):
 
 
 def _rss_detail(c, job):
-    return job.raw.get("description") or ""
+    text = job.raw.get("description") or ""
+    # some feeds send the html escaped instead of in cdata
+    return html.unescape(text) if "&lt;" in text else text
 
 
 def _jibe_list(c):

@@ -471,6 +471,11 @@ def test_rss_feed_at_sitemap(monkeypatch):
     assert jobs[0].id == "1439680700" and jobs[0].location == "Kingsport, TN"
 
 
+def test_rss_escaped_description():
+    job = fetchers.Job("1", "Data Analyst", "", "", {"description": "&lt;p&gt;Use SQL &amp;amp; Tableau&lt;/p&gt;"})
+    assert fetchers.fetch_detail({"platform": "rss"}, job) == "<p>Use SQL &amp; Tableau</p>"
+
+
 def test_jibe_brand(monkeypatch):
     calls = []
     monkeypatch.setattr(fetchers, "http", fake_http({
