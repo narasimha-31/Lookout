@@ -48,12 +48,15 @@ def check(company, f, before=None, model=None):
     if fingerprint == (before or {}).get("ids_hash"):
         return 0, len(jobs), fingerprint
 
-    seen = db.seen_ids(company["id"], [j.id for j in jobs]) if jobs else set()
-    new = [j for j in jobs if j.id not in seen]
-    skipped = [j for j in new if not ((flt.title_ok(j.title, f) or flt.title_maybe(j.title, f))
-                                      and flt.location_ok(j.location, f))]
-    if skipped:
-        db.save_jobs([_row(company, j) for j in skipped])
+    # only matching titles are looked up by id, supabase logs every request url and long id lists fill the log quota
+    jobs_ok = [j for j in jobs if flt.title_ok(j.title, f) or flt.title_maybe(j.title, f)]
+    seen = db.seen_ids(company["id"], [j.id for j in jobs_ok]) if jobs_ok else set()
+    new = [j for j in jobs_ok if j.id not in seen]
+    skipped = [j for j in new if not flt.location_ok(j.location, f)]
+    # the rest still gets stored, duplicates are ignored by the database
+    others = [j for j in jobs if j not in jobs_ok]
+    if skipped or others:
+        db.save_jobs([_row(company, j) for j in skipped + others])
 
     sent, errored = 0, False
     skipped_ids = {j.id for j in skipped}
