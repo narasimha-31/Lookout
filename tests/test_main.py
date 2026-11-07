@@ -1,4 +1,5 @@
-﻿import pytest
+from datetime import datetime, timezone
+import pytest
 
 import main
 from fetchers import Job
@@ -285,3 +286,11 @@ def test_heartbeat_survives_learn_failure(world, monkeypatch):
     monkeypatch.setattr(main, "learn", lambda: "Fit agreed with you on 3 of 4 reactions today")
     main.heartbeat()
     assert "Fit agreed with you on 3 of 4" in bodies[1]
+
+
+def test_workday_down_in_its_weekly_window():
+    utc = lambda *a: datetime(*a, tzinfo=timezone.utc)
+    assert main.workday_down(utc(2026, 11, 7, 7, 10))
+    assert main.workday_down(utc(2026, 11, 7, 10, 59))
+    assert not main.workday_down(utc(2026, 11, 7, 11, 0))
+    assert not main.workday_down(utc(2026, 11, 6, 6, 50))

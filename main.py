@@ -123,9 +123,17 @@ def _one(c, f, before, model=None):
                   "last_error": None, "ids_hash": fingerprint}
 
 
+def workday_down(now=None):
+    # workday's weekly update takes its sites down friday 11 pm to saturday 3 am pacific
+    t = (now or datetime.now(timezone.utc)).astimezone(ZoneInfo("America/Los_Angeles"))
+    return (t.weekday() == 4 and t.hour >= 23) or (t.weekday() == 5 and t.hour < 3)
+
+
 def run():
     f = db.filters()
     companies = db.companies()
+    if workday_down():
+        companies = [c for c in companies if c["platform"] != "workday"]
     health = db.all_health()
     model = db.fit_model()
     # companies sit on different job boards, so a few at once is still polite
