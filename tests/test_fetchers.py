@@ -609,3 +609,15 @@ def test_dejobs_one_company_on_shared_site(monkeypatch):
     jobs = fetchers.fetch_list(c)
     assert jobs[0].url == "https://dejobs.org/houston-tx/data-analyst/AB12/job/"
     assert calls[0][2]["params"]["company"] == "HCA Healthcare" and calls[0][2]["params"]["sort"] == "date"
+
+
+def test_snaphop_splits_slug_and_sorts_newest(monkeypatch):
+    old = "https://www.x.com/jobs/job/clerk-administrative-reno-nv-a1qaa/00000000-0000-11e0-0000-000000000000"
+    new = "https://www.x.com/jobs/job/software-engineering-manager-information-technology-houston-metro-area-texas-a1qbb/00000000-0000-11f1-0000-000000000000"
+    monkeypatch.setattr(fetchers, "http", fake_http({
+        "/sitemap.xml": Resp(text="<sitemapindex><sitemap><loc>https://www.x.com/jobs/job_sitemap_0_100.xml</loc></sitemap></sitemapindex>"),
+        "job_sitemap_0_100.xml": Resp(text=f"<urlset><url><loc>{old}</loc></url><url><loc>{new}</loc></url></urlset>"),
+    }, []))
+    jobs = fetchers.fetch_list({"platform": "snaphop", "board": "x.gosnaphop.com"})
+    assert [(j.title, j.location) for j in jobs] == [("Software Engineering Manager", "Houston Metro Area Texas"), ("Clerk", "Reno Nv")]
+    assert jobs[0].url.startswith("https://x.gosnaphop.com/jobs/job/")

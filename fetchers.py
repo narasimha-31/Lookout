@@ -869,6 +869,42 @@ def _tbe_detail(c, job):
     return page[start:page.find("<link", start)]
 
 
+SNAPHOP_TOPICS = ("administrative|finance-and-accounting|information-technology|human-resources|engineering|healthcare"
+                  "|marketing|sales|legal|supply-chain|creative")
+
+
+def _snaphop_list(c):
+    # staffing portals on gosnaphop.com; job urls read "<title>-<topic>-<place>-<id>/<uuid>"
+    index = http("GET", f"https://{c['board']}/sitemap.xml", headers={"Accept": "text/xml"}).text
+    urls = []
+    for m in re.findall(r"<loc>(.*?)</loc>", index):
+        # the index points at the company's own site, which sits behind a bot check; the portal serves the same files
+        sub = re.sub(r"https://[^/]+", f"https://{c['board']}", m)
+        urls += re.findall(r"<loc>(.*?/jobs/job/.*?)</loc>", http("GET", sub, headers={"Accept": "text/xml"}).text)
+    # the uuid carries its creation time, newest first
+    stamp = lambda u: (lambda p: p[2][1:] + p[1] + p[0])(u.rstrip("/").rsplit("/", 1)[-1].split("-"))
+    jobs = []
+    for u in sorted(set(urls), key=stamp, reverse=True)[:c.get("newest")]:
+        slug = u.split("/jobs/job/")[1].split("/")[0]
+        m = re.match(rf"^(.+)-({SNAPHOP_TOPICS})-(.+?)-(a1q[a-z0-9]+)$", slug)
+        title, place = (m[1], m[3]) if m else (slug, "")
+        jobs.append(Job(u.rstrip("/").rsplit("/", 1)[-1], title.replace("-", " ").title(), place.replace("-", " ").title(),
+                        re.sub(r"https://[^/]+", f"https://{c['board']}", u)))
+    return jobs
+
+
+def _snaphop_detail(c, job):
+    page = http("GET", job.url, headers={"Accept": "text/html"}).text
+    for block in re.findall(r'<script type="application/ld\+json">(.*?)</script>', page, re.S):
+        try:
+            data = json.loads(block)
+        except ValueError:
+            continue
+        if data.get("description"):
+            return data["description"]
+    return ""
+
+
 def _yc_page(path):
     page = http("GET", f"https://www.ycombinator.com{path}", headers={"Accept": "text/html"}).text
     return json.loads(html.unescape(re.search(r'data-page="([^"]+)"', page).group(1)))["props"]
@@ -896,13 +932,13 @@ LIST = {"greenhouse": _greenhouse_list, "lever": _lever_list, "ashby": _ashby_li
         "ukg": _ukg_list, "workable": _workable_list, "oracle": _oracle_list, "smartrecruiters": _smartrecruiters_list,
         "consider": _consider_list, "getro": _getro_list, "jibe": _jibe_list, "eightfold": _eightfold_list,
         "rss": _rss_list, "amazon": _amazon_list, "phenom": _phenom_list, "sfxml": _sfxml_list, "bamboohr": _bamboohr_list, "sitemap": _sitemap_list, "icims": _icims_list, "rippling": _rippling_list, "selectminds": _selectminds_list,
-        "paylocity": _paylocity_list, "recruitee": _recruitee_list, "jazzhr": _jazzhr_list, "avature": _avature_list, "taleo": _taleo_list, "email": _email_list, "inbox": _inbox_list, "wpgh": _wpgh_list, "jobvite": _jobvite_list, "pinpoint": _pinpoint_list, "dejobs": _dejobs_list, "csod": _csod_list, "tbe": _tbe_list, "yc": _yc_list}
+        "paylocity": _paylocity_list, "recruitee": _recruitee_list, "jazzhr": _jazzhr_list, "avature": _avature_list, "taleo": _taleo_list, "email": _email_list, "inbox": _inbox_list, "wpgh": _wpgh_list, "jobvite": _jobvite_list, "pinpoint": _pinpoint_list, "dejobs": _dejobs_list, "csod": _csod_list, "tbe": _tbe_list, "yc": _yc_list, "snaphop": _snaphop_list}
 DETAIL = {"greenhouse": _greenhouse_detail, "lever": _lever_detail, "ashby": _ashby_detail, "workday": _workday_detail,
           "ukg": _ukg_detail, "workable": _workable_detail, "oracle": _oracle_detail,
           "smartrecruiters": _smartrecruiters_detail, "consider": _consider_detail, "getro": _getro_detail,
           "jibe": _jibe_detail, "eightfold": _eightfold_detail, "rss": _rss_detail,
           "amazon": _amazon_detail, "phenom": _phenom_detail, "sfxml": _sfxml_detail, "bamboohr": _bamboohr_detail, "sitemap": _sitemap_detail, "icims": _icims_detail, "rippling": _rippling_detail, "selectminds": _selectminds_detail,
-          "paylocity": _sitemap_detail, "recruitee": _rss_detail, "jazzhr": _sitemap_detail, "avature": _avature_detail, "taleo": _taleo_detail, "email": lambda c, job: "", "inbox": lambda c, job: "", "wpgh": _wpgh_detail, "jobvite": _sitemap_detail, "pinpoint": _rss_detail, "dejobs": _rss_detail, "csod": _rss_detail, "tbe": _tbe_detail, "yc": _yc_detail}
+          "paylocity": _sitemap_detail, "recruitee": _rss_detail, "jazzhr": _sitemap_detail, "avature": _avature_detail, "taleo": _taleo_detail, "email": lambda c, job: "", "inbox": lambda c, job: "", "wpgh": _wpgh_detail, "jobvite": _sitemap_detail, "pinpoint": _rss_detail, "dejobs": _rss_detail, "csod": _rss_detail, "tbe": _tbe_detail, "yc": _yc_detail, "snaphop": _snaphop_detail}
 
 
 def fetch_list(company, newest=None):
