@@ -292,6 +292,9 @@ def test_sitemap_state_zip(monkeypatch):
     monkeypatch.setattr(fetchers, "http", fake_http({"sitemap.xml": Resp(text=urls)}, []))
     c["overrides"] = {"us_only": True}
     assert [j.location for j in fetchers.fetch_list(c)] == ["TX, United States"]
+    urls3 = "<urlset><url><loc>https://h.com/job/Cochin-Analyst-II-KL-682042/2/</loc></url></urlset>"
+    monkeypatch.setattr(fetchers, "http", fake_http({"sitemap.xml": Resp(text=urls3)}, []))
+    assert fetchers.fetch_list({"platform": "sitemap", "board": "h.com/sitemap.xml"}) == []
 
 
 def test_sitemap(monkeypatch):

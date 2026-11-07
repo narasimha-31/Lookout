@@ -508,7 +508,8 @@ def _sitemap_list(c):
         state = place and STATE_END.search("-" + place[1])
         if state:
             title = title[:place.start()]
-        elif (c.get("overrides") or {}).get("us_only"):
+        # a six digit postal code, like "Cochin-KL-682042", is never a us job
+        elif (c.get("overrides") or {}).get("us_only") or re.search(r"-\d{6}$", title):
             continue
         jobs.append(Job(url, title.replace("-", " ").replace("_", " ").strip(), f"{place[1].upper()}, United States" if state else "", url))
     return jobs
@@ -873,7 +874,7 @@ def _yc_list(c):
 
 
 def _yc_detail(c, job):
-    j = _yc_page(job.raw["url"])["job"]
+    j = _yc_page(job.url.removeprefix("https://www.ycombinator.com"))["job"]
     lines = [f"Visa: {j.get('visa')}", f"Experience: {j.get('minExperience')}"] + (j.get("description") or "").splitlines()
     return "".join(f"<p>{html.escape(x)}</p>" for x in lines if x and x.strip())
 
