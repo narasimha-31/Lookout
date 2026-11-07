@@ -58,19 +58,14 @@ def check(company, f, before=None, model=None):
     if skipped or others:
         db.save_jobs([_row(company, j) for j in skipped + others])
 
-    sent, errored = 0, False
+    sent = 0
     skipped_ids = {j.id for j in skipped}
     for job in (j for j in new if j.id not in skipped_ids):
-        try:
-            jd = fetchers.fetch_detail(company, job)
-        except Exception:
-            # one broken posting shouldn't hold up the rest, it's retried next run
-            errored = True
-            continue
+        jd = _detail(company, job)
         text = flt.html_to_text(jd)
         years = flt.years_required(text)
-        # every description has to name a real data tool, boards with no description fall back to the title
-        unsure = not flt.skills_ok(text) if text else flt.needs_skills(job.title, f)
+        # every description has to name a real data tool; with no description the matching title is enough, you check the posting
+        unsure = bool(text) and not flt.skills_ok(text)
         if (unsure or flt.software_required(text) or flt.dealbreakers(text, f) or flt.student_only(job.title, text) or flt.abroad(job.location, text, f)
                 or (years is not None and years > flt.max_years(job.title))):
             db.save_jobs([_row(company, job)])
@@ -89,8 +84,17 @@ def check(company, f, before=None, model=None):
                                  key=f"{company['id']}:{job.id}"))
         db.save_jobs([_row(company, job, emailed=True, repost=repost, description=text[:fit.TEXT_CHARS], score=score)])
         sent += 1
-    # no fingerprint so the unchanged list is looked at again
-    return sent, len(jobs), None if errored else fingerprint
+    return sent, len(jobs), fingerprint
+
+
+def _detail(company, job):
+    # a posting that can't be read is sent with its link instead of dropped
+    for _ in range(2):
+        try:
+            return fetchers.fetch_detail(company, job)
+        except Exception:
+            pass
+    return ""
 
 
 def _quietly(fn, *args, **kw):

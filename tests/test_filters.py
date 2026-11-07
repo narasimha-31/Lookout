@@ -1,4 +1,4 @@
-from filters import (software_required, abroad, dealbreakers, html_to_text, location_ok, needs_skills, years_required, pay, skills_ok, student_only,
+from filters import (software_required, abroad, dealbreakers, html_to_text, location_ok, years_required, pay, skills_ok, student_only,
                      title_maybe, title_ok)
 
 F = {
@@ -55,13 +55,6 @@ def test_unknown_analyst_titles_need_skills():
     assert not skills_ok("Review transcripts for accuracy using Excel, SAP and dashboards")
     assert skills_ok("Pull reports with SQL or Python")
     assert not skills_ok("Review transcripts for accuracy and answer calls")
-    assert needs_skills("Supply Chain Services Service Line Coordinator", F)
-    assert needs_skills("Buyer - Procurement Planning", F)
-    assert needs_skills("Supply Chain Analyst", F)
-    assert needs_skills("Systems Analyst (Site Reliability Engineer)", F)
-    assert not needs_skills("Data Quality Analyst", F)
-    assert not needs_skills("Data Steward", F)
-    assert not needs_skills("BI Developer", F)
     assert not skills_ok("Builds par level systems. Processes supply and implant requisitions. Basic communication skills.")
 
 

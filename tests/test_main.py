@@ -112,6 +112,12 @@ def test_data_title_without_data_tools_is_skipped(world):
     assert main.check(company(), F)[0] == 1
 
 
+def test_no_description_sends_any_matching_title(world):
+    world["jobs"] = [job(1, "Supply Chain Analyst"), job(2, "Welder")]
+    world["jd"] = {"1": "", "2": ""}
+    assert main.check(company(), F)[0] == 1
+
+
 def test_failed_send_is_retried_next_run(world):
     world["jobs"] = [job(1)]
     world["send_fails"] = True
@@ -225,15 +231,17 @@ def test_weekly_audit_keeps_companies_with_few_hits(world, monkeypatch):
     assert paused == [] and world["sent"] == ["Lookout weekly: 0 paused"]
 
 
-def test_broken_posting_does_not_block_others(world, monkeypatch):
+def test_unreadable_posting_is_sent_with_its_link(world, monkeypatch):
     world["jobs"] = [job(1), job(2)]
     real = main.fetchers.fetch_detail
-    monkeypatch.setattr(main.fetchers, "fetch_detail", lambda c, j: (_ for _ in ()).throw(OSError("404")) if j.id == "1" else real(c, j))
-    sent, _, fingerprint = main.check(company(), F)
-    assert sent == 1 and fingerprint is None
-    assert [r["external_job_id"] for r in world["saved"]] == ["2"]
-    monkeypatch.setattr(main.fetchers, "fetch_detail", real)
-    assert main.check(company(), F, {"ids_hash": fingerprint})[0] == 1
+    tries = []
+    def flaky(c, j):
+        if j.id == "1":
+            tries.append(1)
+            raise OSError("404")
+        return real(c, j)
+    monkeypatch.setattr(main.fetchers, "fetch_detail", flaky)
+    assert main.check(company(), F)[0] == 2 and len(tries) == 2
 
 
 def test_senior_titles_need_a_low_years_ask(world):

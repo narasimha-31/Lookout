@@ -83,11 +83,6 @@ def title_ok(title, f):
     return bool(work) or any(ok for _, ok in _roles(title, f))
 
 
-def needs_skills(title, f):
-    # with no description to read, only a title that names data work is trusted
-    return not (title_ok(title, f) and _matches(WORK + DATA_DOMAINS, title))
-
-
 def title_maybe(title, f):
     # an analyst title without a known domain, worth reading the description for
     return not title_ok(title, f) and any(r == "analyst" for r, _ in _roles(title, f))
