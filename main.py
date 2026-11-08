@@ -66,7 +66,9 @@ def check(company, f, before=None, model=None):
         years = flt.years_required(text)
         # every description has to name a real data tool; with no description the matching title is enough, you check the posting
         unsure = bool(text) and not flt.skills_ok(text)
-        if (unsure or flt.software_required(text) or flt.dealbreakers(text, f) or flt.student_only(job.title, text) or flt.abroad(job.location, text, f)
+        # the posting page can name a place the job list left out
+        if (unsure or flt.software_required(text) or flt.dealbreakers(text, f) or flt.student_only(job.title, text)
+                or not flt.location_ok(job.location, f) or flt.abroad(job.location, text, f)
                 or (years is not None and years > flt.max_years(job.title))):
             db.save_jobs([_row(company, job)])
             continue

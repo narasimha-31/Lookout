@@ -528,7 +528,11 @@ def _sitemap_detail(c, job, headers=None, params=None):
                 job.title = html.unescape(html.unescape(item.get("title") or job.title))
                 job.location = ", ".join(x for x in (place.get("addressLocality"), place.get("addressRegion")) if x) or job.location
                 return html.unescape(item.get("description") or "")
-    # successfactors career sites only have it in the page
+    # successfactors career sites only have it in the page, with the place in labelled fields after the description
+    fields = re.findall(r'joblayouttoken-label"[^>]*>\s*([^<]*?):?\s*</span>\s*<span[^>]*>\s*([^<]*?)\s*</span>', page)
+    place = [html.unescape(v) for k, v in fields if re.search(r"city|state|country|location", k, re.I) and re.search(r"[a-z]", v, re.I)]
+    if place:
+        job.location = ", ".join(dict.fromkeys(place))
     found = re.search(r'class="jobdescription"[^>]*>|itemprop="description"[^>]*>', page)
     column = page.find('class="jobColumnOne"')
     if not found and column > 0:

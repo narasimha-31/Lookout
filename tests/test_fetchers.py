@@ -621,3 +621,14 @@ def test_snaphop_splits_slug_and_sorts_newest(monkeypatch):
     jobs = fetchers.fetch_list({"platform": "snaphop", "board": "x.gosnaphop.com"})
     assert [(j.title, j.location) for j in jobs] == [("Software Engineering Manager", "Houston Metro Area Texas"), ("Clerk", "Reno Nv")]
     assert jobs[0].url.startswith("https://x.gosnaphop.com/jobs/job/")
+
+
+def test_successfactors_place_after_description(monkeypatch):
+    page = ('<span itemprop="description">Strategy work with Excel and Tableau.</span><script></script>'
+            '<span class="joblayouttoken-label" role="heading">Posting City: </span> <span class="rtltextaligneligible"># </span>'
+            '<span class="joblayouttoken-label" role="heading">Job Country: </span> <span lang="en-US">India </span>'
+            '<span class="joblayouttoken-label" role="heading">Travel Required: </span> <span>Less than 10%</span>')
+    monkeypatch.setattr(fetchers, "http", fake_http({"/job/": Resp(text=page)}, []))
+    job = Job("1", "Senior Analyst Corporate Strategy KA", "", "https://careers.te.com/job/x/1/")
+    assert "Tableau" in fetchers._sitemap_detail({}, job)
+    assert job.location == "India"
