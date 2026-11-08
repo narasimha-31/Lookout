@@ -68,7 +68,7 @@ def judge(c, f):
 def discover():
     f = db.filters()
     seen = db.known()
-    fresh = [n for n in names() if n.lower() not in seen]
+    fresh = [n for n in names() if n.lower() not in seen and not flt.offshore(n)]
     with ThreadPoolExecutor(8) as pool:
         found = [c for c in pool.map(board, fresh) if c and c["board"].lower() not in seen]
     added, blocked = [], []

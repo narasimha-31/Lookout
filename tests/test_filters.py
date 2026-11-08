@@ -238,3 +238,11 @@ def test_software_languages_only_when_required():
 def test_new_tools_and_weak_ones():
     assert skills_ok("Build Spotfire dashboards") and skills_ok("Python/R") and skills_ok("Alteryx workflows")
     assert not skills_ok("AWS and Azure, Excel and SAP") and not skills_ok("Our R&D team")
+
+
+def test_offshore_firms_never_followed():
+    from filters import offshore
+    for n in ("Accenture", "Capgemini", "Cognizant", "Tata Consultancy Services", "TCS", "HCLTech", "EXL", "Genpact", "NTT DATA"):
+        assert offshore(n), n
+    for n in ("Chubb", "Excel Energy", "Charles Schwab", "Texas Children's", "Duke Energy", "Wells Fargo", "Trust Bank"):
+        assert not offshore(n), n

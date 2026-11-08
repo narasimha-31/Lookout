@@ -42,6 +42,18 @@ R_TOOL = re.compile(r"\bRStudio\b|\bR (programming|language|studio)\b|(?<![\w&-]
 LANGS = re.compile(r"C\+\+|C#|\bJava\b(?!\s*[Ss]cript)|\bJavaScript\b|\bTypeScript\b|\bGolang\b|\bRust\b|\bKotlin\b"
                    r"|(?<![\w-])C(?![\w+#-])|(?<![\w-])Go(?![\w-])")
 SOFT = re.compile(r"prefer|nice to have|a plus|bonus|desired|ideally|familiarity|exposure", re.I)
+# outsourcing firms that staff us roles from abroad; never followed, whatever their board says
+OFFSHORE = re.compile(r"accenture|capgemini|cognizant|infosys|wipro|tata consultancy|\btcs\b|hcl|tech mahindra|ltimindtree|mindtree"
+                      r"|larsen|\blti\b|mphasis|hexaware|virtusa|ntt data|persistent systems|zensar|birlasoft|coforge|genpact"
+                      r"|\bexl\b|exlservice|\bwns\b|mu sigma|tiger analytics|latentview|fractal|igate|syntel|mastech|\bust\b|ust global"
+                      r"|sutherland|firstsource|concentrix|teleperformance|dxc|kyndryl|\bcgi\b|epam|sonata software|cyient|tredence"
+                      r"|sigmoid|course5|quess|happiest minds|kpit|nagarro|globallogic|itc infotech|sasken|mindtree", re.I)
+
+
+def offshore(name):
+    return bool(OFFSHORE.search(name or ""))
+
+
 TERRITORIES = re.compile(r"puerto rico|guam|virgin islands|american samoa|mariana islands|\bPR\b(?=,? (US|USA|United States)\b|$)", re.I)
 PARTS = re.compile(r"\s[-–—|/]\s|[,()|:–—]")
 LEVEL = re.compile(r"\b([ivx]+|\d+|jr\.?|junior|entry[- ]level|level \w+)\b", re.I)

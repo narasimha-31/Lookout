@@ -140,7 +140,7 @@ def workday_down(now=None):
 
 def run():
     f = db.filters()
-    companies = db.companies()
+    companies = [c for c in db.companies() if not flt.offshore(c["name"])]
     if workday_down():
         companies = [c for c in companies if c["platform"] != "workday"]
     health = db.all_health()
