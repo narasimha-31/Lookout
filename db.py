@@ -147,6 +147,20 @@ def prune(keep, days=14):
     return len(doomed)
 
 
+def prune_blocked():
+    # blocked companies are never checked, so their unsent rows are dead weight; emailed ones stay for the fit model
+    ids = [r["id"] for r in http("GET", _url("companies"), headers=_headers(), params={"select": "id", "active": "eq.false"}).json()]
+    gone = 0
+    for i in range(0, len(ids), 50):
+        part = f"in.({','.join(map(str, ids[i:i + 50]))})"
+        r = http("DELETE", _url("seen_jobs"), headers=_headers("return=representation"),
+                 params={"company_id": part, "emailed": "eq.false", "select": "id"})
+        gone += len(r.json())
+        # a company switched back on starts fresh instead of mailing every old job
+        http("PATCH", _url("companies"), headers=_headers("return=minimal"), params={"id": part}, json={"first_run_done": False})
+    return gone
+
+
 def quiet(days=14):
     # boards with no new job in a while have usually moved or stopped hiring
     cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()

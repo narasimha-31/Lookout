@@ -101,9 +101,9 @@ def _detail(company, job):
 
 def _quietly(fn, *args, **kw):
     try:
-        fn(*args, **kw)
+        return fn(*args, **kw)
     except Exception:
-        pass
+        return None
 
 
 def _one(c, f, before, model=None):
@@ -189,11 +189,13 @@ def heartbeat():
     except Exception as e:
         # gmail or training trouble must not stop the daily summary
         fit_line = f"Fit model not updated today ({type(e).__name__})."
-    body = (f"Watching {companies} companies.\nLast 24 hours: {seen} new postings seen, {emailed} emailed to you.\n"
-            + ("\nFailing boards:\n" + "\n".join(bad) if bad else "\nAll job boards working.") + f"\n\n{fit_line}")
-    mail.send(mail.notice(f"Lookout daily: {emailed} sent, {len(bad)} failing", body))
     f = db.filters()
-    db.prune(lambda title: flt.title_ok(title, f) or flt.title_maybe(title, f))
+    old = _quietly(db.prune, lambda title: flt.title_ok(title, f) or flt.title_maybe(title, f)) or 0
+    gone = _quietly(db.prune_blocked) or 0
+    body = (f"Watching {companies} companies.\nLast 24 hours: {seen} new postings seen, {emailed} emailed to you.\n"
+            + ("\nFailing boards:\n" + "\n".join(bad) if bad else "\nAll job boards working.") + f"\n\n{fit_line}"
+            + f"\nCleanup: {old} unrelated postings over 14 days old and {gone} from blocked companies deleted.")
+    mail.send(mail.notice(f"Lookout daily: {emailed} sent, {len(bad)} failing", body))
 
 
 AUDIT_JDS = 10
