@@ -1,4 +1,5 @@
 import email
+import email.header
 import html
 import imaplib
 import os
@@ -93,6 +94,8 @@ def reactions(days=30):
             for i in ids[0].split():
                 _, data = box.fetch(i, "(BODY.PEEK[HEADER.FIELDS (X-LOOKOUT-JOB)])")
                 key = email.message_from_bytes(data[0][1]).get("X-Lookout-Job")
-                if key:
+                # long url ids come back encoded and folded over lines
+                key = key and str(email.header.make_header(email.header.decode_header(key))).replace("\r\n", "").replace("\n", "")
+                if key and ":" in key:
                     found[key.strip()] = label
     return found
