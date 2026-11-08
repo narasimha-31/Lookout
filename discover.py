@@ -79,9 +79,9 @@ def discover():
             continue
         if active is None:
             continue
-        # first_run_done so the roles open today reach you too
+        # the first read only saves what is open; just later postings get mailed
         row = {"name": c["name"], "platform": c["platform"], "board": c["board"], "active": active,
-               "first_run_done": active, "note": None if active else f"{why} (found in the news)"}
+               "first_run_done": False, "note": None if active else f"{why} (found in the news)"}
         if db.add_company(row):
             (added if active else blocked).append(f"{c['name']} ({c['platform']}): {why}")
     if added or blocked:
