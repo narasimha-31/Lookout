@@ -122,7 +122,13 @@ def _workday_list(c):
 def _workday_detail(c, job):
     _, base = _workday_base(c)
     data = http("GET", f"{base}{job.id}").json()
-    return (data.get("jobPostingInfo") or {}).get("jobDescription") or ""
+    info = data.get("jobPostingInfo") or {}
+    # the list often says "2 Locations" or nothing; the posting names the country
+    country = (info.get("country") or {}).get("descriptor") or ""
+    if country and country != "United States of America":
+        places = [info.get("location") or ""] + (info.get("additionalLocations") or [])
+        job.location = "; ".join(p for p in places if p) + f", {country}"
+    return info.get("jobDescription") or ""
 
 
 UKG_SEARCH = {

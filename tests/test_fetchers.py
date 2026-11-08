@@ -632,3 +632,18 @@ def test_successfactors_place_after_description(monkeypatch):
     job = Job("1", "Senior Analyst Corporate Strategy KA", "", "https://careers.te.com/job/x/1/")
     assert "Tableau" in fetchers._sitemap_detail({}, job)
     assert job.location == "India"
+
+
+def test_workday_posting_country_only_when_abroad(monkeypatch):
+    abroad = {"jobPostingInfo": {"jobDescription": "SQL", "location": "Buenos Aires",
+                                 "country": {"descriptor": "Argentina"}}}
+    home = {"jobPostingInfo": {"jobDescription": "SQL", "location": "Owings Mills, MD",
+                               "additionalLocations": ["Colorado Springs, CO"], "country": {"descriptor": "United States of America"}}}
+    c = {"board": "x.wd1.myworkdayjobs.com/x", "site": "s"}
+    monkeypatch.setattr(fetchers, "http", fake_http({"/a": Resp(abroad), "/b": Resp(home)}, []))
+    job = Job("/a", "Business & Data Architecture Developer", "", "")
+    fetchers._workday_detail(c, job)
+    assert job.location == "Buenos Aires, Argentina"
+    job = Job("/b", "Associate Analyst, Real-Time Desk", "2 Locations", "")
+    fetchers._workday_detail(c, job)
+    assert job.location == "2 Locations"
