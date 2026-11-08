@@ -133,6 +133,9 @@ def _place_ok(place, f):
         # "TX - San Angelo" is a state, "IN - Bengaluru, India" is not Indiana
         state = m.group(2) == " - " and m.group(1) in f["locations_allowed"] and not _matches(f["locations_blocked"], place)
         return m.group(1) == "US" or state
+    # "King Abdullah Economic City, 02": us states are letters, never numbered regions
+    if re.search(r",\s*\d{1,3}\s*$", place):
+        return False
     # "Kulim, 02 (MY)", "London (GB)": a bracketed code is a country too
     m = re.search(r"\(([A-Z]{2})\)", place)
     if m:

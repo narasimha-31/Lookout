@@ -89,6 +89,8 @@ def test_locations():
     assert location_ok("Indianapolis, IN", g)
     assert location_ok("Dublin, OH", g)
     assert not location_ok("Kulim, 02 (MY)", F)
+    assert not location_ok("King Abdullah Economic City, 02", F)
+    assert location_ok("Houston, TX 77056", F)
     assert location_ok("Houston (US)", F)
     assert not location_ok("Barceloneta, Puerto Rico", F)
     assert not location_ok("San Juan, PR, United States", F)
