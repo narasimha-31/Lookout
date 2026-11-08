@@ -246,3 +246,14 @@ def test_offshore_firms_never_followed():
         assert offshore(n), n
     for n in ("Chubb", "Excel Energy", "Charles Schwab", "Texas Children's", "Duke Energy", "Wells Fargo", "Trust Bank"):
         assert not offshore(n), n
+
+
+def test_google_senior_levels_skipped():
+    from filters import google_senior
+    assert google_senior("Google", "Senior Financial Analyst, Technical Infrastructure, Supply Chain")
+    assert google_senior("Google", "Technical Program Manager III, AI Product Growth, Google Ads")
+    assert google_senior("Google", "Partner Incentives Senior Analyst, Google Cloud")
+    assert not google_senior("Google", "Financial Analyst, Cloud Product Finance")
+    assert not google_senior("Google", "Data Analytics and Systems Analyst, Tax Technology")
+    assert not google_senior("Google", "Business Analyst II, Payments")
+    assert not google_senior("Chubb", "Senior Data Analyst")

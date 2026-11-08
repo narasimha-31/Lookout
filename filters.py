@@ -241,6 +241,12 @@ def dealbreakers(text, f):
     return []
 
 
+def google_senior(company, title):
+    # google's pages are closed to robots, so its level words stand in for the years
+    return company.lower() == "google" and bool(re.search(r"\b(senior|sr|staff|lead|principal|manager|director|head)\b", title, re.I)
+                                                or re.search(r"\b(III|IV|V|VI)\b", title))
+
+
 def student_only(title, text):
     return bool(re.search(r"\bintern(ship)?\b|co-op", title, re.I) and STUDENT.search(text))
 
