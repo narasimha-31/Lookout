@@ -6,6 +6,9 @@ from dataclasses import dataclass, field
 from urllib.parse import unquote
 
 import requests
+from threading import Lock
+
+DEJOBS_TURN = Lock()
 
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
 
@@ -806,8 +809,11 @@ def _dejobs_list(c):
     extra = {"company": company, "q": DEJOBS_TITLES, "sort": "date"} if company else {}
     jobs, page = [], 1
     while len(jobs) < _cap(c):
-        data = http("GET", "https://prod-search-api.jobsyn.org/api/v1/solr/search", headers={"X-Origin": c["board"]},
-                    params={"page": page, "num_items": 10, "location": "United States", **extra}).json()
+        # 30 odd companies share this one api, so take turns or it answers 429
+        with DEJOBS_TURN:
+            data = http("GET", "https://prod-search-api.jobsyn.org/api/v1/solr/search", headers={"X-Origin": c["board"]},
+                        params={"page": page, "num_items": 10, "location": "United States", **extra}).json()
+            time.sleep(0.5)
         posts = data.get("jobs") or []
         jobs += [Job(p["guid"], p.get("title_exact") or "", p.get("location_exact") or "",
                      _dejobs_link(p) if company else f"https://{c['board']}/{p['guid']}/job/",
