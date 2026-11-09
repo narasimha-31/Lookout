@@ -302,3 +302,12 @@ def test_workday_down_in_its_weekly_window():
     assert main.workday_down(utc(2026, 11, 7, 10, 59))
     assert not main.workday_down(utc(2026, 11, 7, 11, 0))
     assert not main.workday_down(utc(2026, 11, 6, 6, 50))
+
+
+def test_title_place_counts_when_location_missing(world):
+    # suntory lists no location and names germany only in the title
+    world["jobs"] = [job(1, "Frankfurt, Germany Working Student Insights & Analytics Frankfurt HE", loc=""),
+                     job(2, "Data Analyst - Remote", loc="")]
+    world["jd"] = {"1": "<p>Werkstudent Insights & Analytics, Power BI und Excel</p>"}
+    assert main.check(company(), {**F, "title_include": ["analy"], "locations_blocked": ["Germany"]})[0] == 1
+    assert world["sent"] == ["New role at Acme: Data Analyst - Remote, location not listed"]

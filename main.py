@@ -69,7 +69,9 @@ def check(company, f, before=None, model=None):
         # the posting page can name a place the job list left out
         if (unsure or flt.software_required(text) or flt.dealbreakers(text, f) or flt.student_only(job.title, text)
                 or flt.google_senior(job.company or company["name"], job.title)
-                or not flt.location_ok(job.location, f) or flt.abroad(job.location, text, f)
+                # with no location listed the title can name the place, "Frankfurt, Germany Working Student"
+                or not flt.location_ok(job.location, f)
+                or flt.abroad(job.location, text if job.location else f"{job.title}\n{text}", f)
                 or (years is not None and years > flt.max_years(job.title))):
             db.save_jobs([_row(company, job)])
             continue
