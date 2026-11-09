@@ -13,6 +13,8 @@ import fit
 import mail
 
 NEWEST = 200
+# these two serve 10 or 20 a page, so 200 costs most of the run; neither posts 100 jobs in ten minutes
+PAGED_NEWEST = {"workday": 100, "dejobs": 100}
 # vc boards list tens of thousands of jobs worldwide
 FIRST_CHECK = 2000
 
@@ -36,7 +38,7 @@ def check(company, f, before=None, model=None):
     """Returns (emails sent, jobs listed, fingerprint of the job list)."""
     f = {**f, **{k: v for k, v in (company.get("overrides") or {}).items() if k in f}}
     # after the first check only the newest jobs matter
-    newest = NEWEST if company["first_run_done"] else FIRST_CHECK
+    newest = PAGED_NEWEST.get(company["platform"], NEWEST) if company["first_run_done"] else FIRST_CHECK
     jobs = list({j.id: j for j in fetchers.fetch_list(company, newest)}.values())
     fingerprint = hashlib.sha1("\n".join(sorted(j.id for j in jobs)).encode()).hexdigest()[:16]
 
@@ -153,7 +155,7 @@ def run():
     health = db.all_health()
     model = db.fit_model()
     # companies sit on different job boards, so a few at once is still polite
-    with ThreadPoolExecutor(8) as pool:
+    with ThreadPoolExecutor(12) as pool:
         results = list(pool.map(lambda c: _one(c, f, health.get(c["id"]) or {}, model), companies))
     _quietly(db.save_health, [r[2] for r in results])
     sent, failed = sum(r[0] for r in results), sum(r[1] for r in results)

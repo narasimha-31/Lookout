@@ -323,3 +323,12 @@ def test_empty_first_read_is_not_marked_done(world):
     world["jobs"] = []
     assert main.check(company(first_run_done=False), F)[:2] == (0, 0)
     assert world["marked"] == []
+
+
+def test_paged_boards_read_fewer_jobs(world, monkeypatch):
+    asked = []
+    monkeypatch.setattr(main.fetchers, "fetch_list", lambda c, newest=None: asked.append((c["platform"], newest)) or [])
+    main.check({**company(), "platform": "workday"}, F)
+    main.check({**company(), "platform": "greenhouse"}, F)
+    main.check({**company(first_run_done=False), "platform": "workday"}, F)
+    assert asked == [("workday", 100), ("greenhouse", 200), ("workday", 2000)]
