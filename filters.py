@@ -309,8 +309,9 @@ def years_required(text):
             # "5 years preferred" is a wish, not a bar
             if re.search(r"prefer|nice to have|a plus|bonus", s[m.end():m.end() + 30], re.I):
                 continue
-            first = m.group(1).lower()
-            n = NUMBER_WORDS.get(first) or int(first)
+            nums = [NUMBER_WORDS.get(x.lower()) or int(x) for x in re.findall(r"\d{1,2}|" + "|".join(NUMBER_WORDS), m.group(0), re.I)]
+            # "3-5 years" is a five year job, while "1-4" still takes juniors
+            n = nums[-1] if nums[0] >= 3 else nums[0]
             # bigger numbers are company history, like "over 30 years of experience"
             if n <= 15:
                 (plain if GENERAL.match(s[m.end():]) else narrow).append(n)

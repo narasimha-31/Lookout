@@ -190,6 +190,8 @@ def test_min_years():
     assert years_required("a minimum of 5+ years of field sales experience and at least 2 years of experience selling") == 5
     assert years_required("3+ years of SQL experience, 2+ years of Python experience") == 3
     assert years_required("1-3 years of experience in analytics") == 1
+    # davita innovation sr analyst, a range from 3 up counts by its top
+    assert years_required("Experience: 3-5 years of work experience.") == 5
     assert years_required("THREE (3) or more years of experience in anti-money laundering") == 3
     assert years_required("5 or more years of relevant experience") == 5
     assert years_required("8+ years in management consulting at a strategy consulting firm or similar, synthesizing "
