@@ -26,6 +26,7 @@ DATA_DOMAINS = ["data", "analytics", "bi", "business intelligence", "etl", "sql"
                 "database", "data warehouse", "visualization", "gis"]
 # applied ai work like llm apps, rag and agents, not machine learning research
 AI_DOMAINS = ["ai", "genai", "gen ai", "generative ai", "llm", "llms", "rag", "agentic", "artificial intelligence"]
+CLOUD = ["cloud", "aws", "azure", "gcp"]
 # associates, specialists and interns are too broad for words like operations or product
 CORE_DOMAINS = DATA_DOMAINS + ["supply chain", "demand", "procurement", "sourcing",
                                "pricing", "information systems", "s&op", "insights"]
@@ -35,8 +36,8 @@ WORK = ["business intelligence", "analytics",
 SKILLS = ["sql", "python", "power bi", "power query", "dax", "tableau", "looker", "snowflake", "etl", "pandas", "postgresql",
           "sql server", "bigquery", "airflow", "dbt", "kafka", "gis", "esri", "qgis", "postgis", "arcgis", "databricks",
           "sas", "alteryx", "spark", "pyspark", "redshift", "azure data factory", "synapse", "mysql", "qlik", "ssrs", "ssis",
-          "spotfire"]
-# a bare "R" is too common a letter, only clear uses count; aws and azure alone are not enough
+          "spotfire", "aws", "azure", "gcp", "google cloud"]
+# a bare "R" is too common a letter, only clear uses count
 R_TOOL = re.compile(r"\bRStudio\b|\bR (programming|language|studio)\b|(?<![\w&-])R\s*/|/\s*R(?![\w&'-])")
 # core software languages; C and Go only count next to another language or the word programming
 LANGS = re.compile(r"C\+\+|C#|\bJava\b(?!\s*[Ss]cript)|\bJavaScript\b|\bTypeScript\b|\bGolang\b|\bRust\b|\bKotlin\b"
@@ -79,7 +80,7 @@ def _roles(title, f):
             if role in BUILDERS:
                 # ai engineer roles paused for now, put AI_DOMAINS back to resume
                 # yield role, any(_matches(DATA_DOMAINS + AI_DOMAINS, p) for p in (parts if alone else [part]))
-                yield role, any(_matches(DATA_DOMAINS, p) for p in (parts if alone else [part]))
+                yield role, any(_matches(DATA_DOMAINS + CLOUD, p) for p in (parts if alone else [part]))
             else:
                 yield role, bool(_matches(f["title_include"] if role in ("analyst", "planner") else CORE_DOMAINS, title))
 
@@ -95,9 +96,18 @@ def title_ok(title, f):
     return bool(work) or any(ok for _, ok in _roles(title, f))
 
 
+WIDE = ["associate", "specialist", "consultant", "coordinator", "intern", "internship", "co-op"]
+
+
+def title_wide(title, f):
+    # "Associate, Tax-Driven Investments" never says analyst, its posting has to name a real data tool
+    return (not title_ok(title, f) and bool(_matches(f["title_include"], title))
+            and any(r in WIDE for r, _ in _roles(title, f)))
+
+
 def title_maybe(title, f):
     # an analyst title without a known domain, worth reading the description for
-    return not title_ok(title, f) and any(r == "analyst" for r, _ in _roles(title, f))
+    return not title_ok(title, f) and (any(r == "analyst" for r, _ in _roles(title, f)) or title_wide(title, f))
 
 
 # excel-only roles are wanted too, a bare "access" is too common a word

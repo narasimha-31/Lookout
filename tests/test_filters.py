@@ -1,5 +1,5 @@
 from filters import (software_required, abroad, dealbreakers, html_to_text, location_ok, years_required, pay, skills_ok, student_only,
-                     title_maybe, title_ok)
+                     title_maybe, title_ok, title_wide)
 
 F = {
     "title_include": ["data", "analytics", "bi", "business intelligence", "supply chain", "gis", "risk", "trading",
@@ -242,7 +242,7 @@ def test_software_languages_only_when_required():
 
 def test_new_tools_and_weak_ones():
     assert skills_ok("Build Spotfire dashboards") and skills_ok("Python/R") and skills_ok("Alteryx workflows")
-    assert not skills_ok("AWS and Azure") and not skills_ok("Our R&D team")
+    assert skills_ok("AWS and Azure") and skills_ok("GCP pipelines") and not skills_ok("Our R&D team")
 
 
 def test_offshore_firms_never_followed():
@@ -262,3 +262,13 @@ def test_google_senior_levels_skipped():
     assert not google_senior("Google", "Data Analytics and Systems Analyst, Tax Technology")
     assert not google_senior("Google", "Business Analyst II, Payments")
     assert not google_senior("Chubb", "Senior Data Analyst")
+
+
+def test_cloud_and_business_titles_without_analyst():
+    assert title_ok("Cloud Network Engineer", F) and title_ok("AWS Connect Developer", F)
+    assert not title_ok("Servo Control Engineer", F)
+    # no analyst in the title, the posting has to name a real data tool
+    assert title_wide("Associate, Tax-Driven Investment", F) and title_maybe("Associate, Tax-Driven Investment", F)
+    assert title_wide("Operations Specialist", F)
+    assert not title_wide("Store Associate", F) and not title_wide("Data Analyst", F) and not title_wide("Claims Analyst", F)
+    assert skills_ok("Excel") and not skills_ok("Excel", office=False)

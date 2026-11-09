@@ -311,3 +311,9 @@ def test_title_place_counts_when_location_missing(world):
     world["jd"] = {"1": "<p>Werkstudent Insights & Analytics, Power BI und Excel</p>"}
     assert main.check(company(), {**F, "title_include": ["analy"], "locations_blocked": ["Germany"]})[0] == 1
     assert world["sent"] == ["New role at Acme: Data Analyst - Remote, location not listed"]
+
+
+def test_wide_titles_need_a_real_data_tool(world):
+    world["jobs"] = [job(1, "Operations Associate"), job(2, "Operations Associate II"), job(3, "Operations Associate I")]
+    world["jd"] = {"1": "<p>Build reports in SQL and Tableau</p>", "2": "<p>Advanced Excel</p>", "3": ""}
+    assert main.check(company(), {**F, "title_include": ["analyst", "operations"]})[0] == 1
