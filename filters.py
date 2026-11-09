@@ -31,12 +31,12 @@ CORE_DOMAINS = DATA_DOMAINS + ["supply chain", "demand", "procurement", "sourcin
                                "pricing", "information systems", "s&op", "insights"]
 WORK = ["business intelligence", "analytics",
         "data analysis", "data engineering"]
-# real data tools from the resume, excel or sap alone is clerical work
+# data tools from the resume
 SKILLS = ["sql", "python", "power bi", "power query", "dax", "tableau", "looker", "snowflake", "etl", "pandas", "postgresql",
           "sql server", "bigquery", "airflow", "dbt", "kafka", "gis", "esri", "qgis", "postgis", "arcgis", "databricks",
           "sas", "alteryx", "spark", "pyspark", "redshift", "azure data factory", "synapse", "mysql", "qlik", "ssrs", "ssis",
           "spotfire"]
-# a bare "R" is too common a letter, only clear uses count; aws and azure alone are like excel, not enough
+# a bare "R" is too common a letter, only clear uses count; aws and azure alone are not enough
 R_TOOL = re.compile(r"\bRStudio\b|\bR (programming|language|studio)\b|(?<![\w&-])R\s*/|/\s*R(?![\w&'-])")
 # core software languages; C and Go only count next to another language or the word programming
 LANGS = re.compile(r"C\+\+|C#|\bJava\b(?!\s*[Ss]cript)|\bJavaScript\b|\bTypeScript\b|\bGolang\b|\bRust\b|\bKotlin\b"
@@ -100,8 +100,12 @@ def title_maybe(title, f):
     return not title_ok(title, f) and any(r == "analyst" for r, _ in _roles(title, f))
 
 
-def skills_ok(text):
-    return bool(R_TOOL.search(text)) or any(re.search(rf"(?<!\w){s}(?!\w)", text, re.I) for s in SKILLS)
+# excel-only roles are wanted too, a bare "access" is too common a word
+OFFICE = ["excel", "sap", "oracle", "microsoft access", "ms access"]
+
+
+def skills_ok(text, office=True):
+    return bool(R_TOOL.search(text)) or (office and any(re.search(rf"(?<!\w){s}(?!\w)", text, re.I) for s in OFFICE)) or any(re.search(rf"(?<!\w){s}(?!\w)", text, re.I) for s in SKILLS)
 
 
 def software_required(text):
@@ -113,7 +117,7 @@ def software_required(text):
         if set(hits) <= {"C", "Go"} and not re.search(r"programming|languages?|coding", s, re.I):
             continue
         # "Python, Java, or SQL" can be met with python or sql
-        if re.search(r"\bor\b|/|\be\.?g\b|such as|like", s, re.I) and skills_ok(s):
+        if re.search(r"\bor\b|/|\be\.?g\b|such as|like", s, re.I) and skills_ok(s, office=False):
             continue
         return s
     return None

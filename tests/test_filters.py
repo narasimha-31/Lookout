@@ -52,7 +52,12 @@ def test_unknown_analyst_titles_need_skills():
     assert not title_maybe("PQA Analyst", F)
     assert not title_maybe("Software Engineer", F)
     assert skills_ok("Strong SQL and Excel skills, build dashboards")
-    assert not skills_ok("Review transcripts for accuracy using Excel, SAP and dashboards")
+    # excel, sap and oracle roles count, from the sysco, invesco and henry schein postings
+    assert skills_ok("Advanced Excel skills required") and skills_ok("Experience with SAP and Oracle")
+    assert skills_ok("Proficient in Microsoft Access") and not skills_ok("Gain access to our tools")
+    # excel can't stand in for a software language
+    assert software_required("Required: experience with Java or Excel.")
+    assert not software_required("Required: Advanced Excel and SAP.")
     assert skills_ok("Pull reports with SQL or Python")
     assert not skills_ok("Review transcripts for accuracy and answer calls")
     assert not skills_ok("Builds par level systems. Processes supply and implant requisitions. Basic communication skills.")
@@ -237,7 +242,7 @@ def test_software_languages_only_when_required():
 
 def test_new_tools_and_weak_ones():
     assert skills_ok("Build Spotfire dashboards") and skills_ok("Python/R") and skills_ok("Alteryx workflows")
-    assert not skills_ok("AWS and Azure, Excel and SAP") and not skills_ok("Our R&D team")
+    assert not skills_ok("AWS and Azure") and not skills_ok("Our R&D team")
 
 
 def test_offshore_firms_never_followed():

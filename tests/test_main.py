@@ -108,7 +108,7 @@ def test_senior_titles_cap_at_three_years(world):
 
 def test_data_title_without_data_tools_is_skipped(world):
     world["jobs"] = [job(1), job(2)]
-    world["jd"] = {"1": "<p>Track orders in Excel and SAP</p>", "2": ""}
+    world["jd"] = {"1": "<p>Track orders and answer calls</p>", "2": ""}
     assert main.check(company(), F)[0] == 1
 
 
