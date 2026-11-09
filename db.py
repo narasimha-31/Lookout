@@ -141,9 +141,9 @@ def prune(keep, days=14):
             break
         last = rows[-1]["id"]
         doomed += [r["id"] for r in rows if not keep(r["title"] or "")]
-    for i in range(0, len(doomed), 200):
+    for i in range(0, len(doomed), 500):
         http("DELETE", _url("seen_jobs"), headers=_headers("return=minimal"),
-             params={"id": f"in.({','.join(map(str, doomed[i:i + 200]))})"})
+             params={"id": f"in.({','.join(map(str, doomed[i:i + 500]))})"})
     return len(doomed)
 
 

@@ -42,7 +42,9 @@ def check(company, f, before=None, model=None):
 
     if not company["first_run_done"]:
         db.save_jobs([_row(company, j) for j in jobs])
-        db.mark_first_run(company["id"])
+        # an empty first read is a board hiccup; marking it done would mail every open job next time
+        if jobs:
+            db.mark_first_run(company["id"])
         return 0, len(jobs), fingerprint
     # same list as last time means nothing new
     if fingerprint == (before or {}).get("ids_hash"):

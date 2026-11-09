@@ -317,3 +317,9 @@ def test_wide_titles_need_a_real_data_tool(world):
     world["jobs"] = [job(1, "Inventory Associate"), job(2, "Inventory Associate II"), job(3, "Inventory Associate I")]
     world["jd"] = {"1": "<p>Build reports in SQL and Tableau</p>", "2": "<p>Advanced Excel</p>", "3": ""}
     assert main.check(company(), F)[0] == 1
+
+
+def test_empty_first_read_is_not_marked_done(world):
+    world["jobs"] = []
+    assert main.check(company(first_run_done=False), F)[:2] == (0, 0)
+    assert world["marked"] == []
