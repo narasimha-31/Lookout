@@ -184,13 +184,13 @@ def test_min_years():
     assert years_required("2+ years of SQL experience") == 2
     assert years_required("3+ years of experience") == 3
     assert years_required("4+ years experience required") == 4
-    assert years_required("2-4 years of relevant experience") == 2
+    assert years_required("2-4 years of relevant experience") == 4
     assert years_required("Experience: 5 years preferred, 1 year required") == 1
     assert years_required("three (3) years of experience") == 3
     assert years_required("a minimum of 5+ years of field sales experience and at least 2 years of experience selling") == 5
     assert years_required("3+ years of SQL experience, 2+ years of Python experience") == 3
     assert years_required("1-3 years of experience in analytics") == 1
-    # davita innovation sr analyst, a range from 3 up counts by its top
+    # davita innovation sr analyst, a range from 2 up counts by its top
     assert years_required("Experience: 3-5 years of work experience.") == 5
     assert years_required("THREE (3) or more years of experience in anti-money laundering") == 3
     assert years_required("5 or more years of relevant experience") == 5
@@ -206,7 +206,7 @@ def test_min_years():
     assert years_required("Bachelor's degree and 4 years of experience, or Master's degree and 2 years of experience") == 2
     assert years_required("Bachelor's Degree with 5+ years (or Master's with 3+ years, or equivalent 8+ years) of "
                           "professional experience in data analysis.") == 3
-    assert years_required("2-4+ years of experience in business analytics, finance/accounting, or related field(s)") == 2
+    assert years_required("2-4+ years of experience in business analytics, finance/accounting, or related field(s)") == 4
     assert years_required("- 2+ years of experience with SQL\n- 1+ years of experience analyzing data using cloud tools") == 2
     assert years_required("Requirements:\n- 2 years of experience\nNice to have:\n- 6+ years of experience in banking") == 2
     assert years_required("3 years or more in a similar procurement, sourcing or supply chain role") == 3
