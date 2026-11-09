@@ -314,6 +314,6 @@ def test_title_place_counts_when_location_missing(world):
 
 
 def test_wide_titles_need_a_real_data_tool(world):
-    world["jobs"] = [job(1, "Operations Associate"), job(2, "Operations Associate II"), job(3, "Operations Associate I")]
+    world["jobs"] = [job(1, "Inventory Associate"), job(2, "Inventory Associate II"), job(3, "Inventory Associate I")]
     world["jd"] = {"1": "<p>Build reports in SQL and Tableau</p>", "2": "<p>Advanced Excel</p>", "3": ""}
-    assert main.check(company(), {**F, "title_include": ["analyst", "operations"]})[0] == 1
+    assert main.check(company(), F)[0] == 1

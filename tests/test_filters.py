@@ -271,6 +271,8 @@ def test_cloud_and_business_titles_without_analyst():
     assert not title_ok("Servo Control Engineer", F)
     # no analyst in the title, the posting has to name a real data tool
     assert title_wide("Associate, Tax-Driven Investment", F) and title_maybe("Associate, Tax-Driven Investment", F)
-    assert title_wide("Operations Specialist", F)
+    assert title_wide("Inventory Specialist", F) and title_wide("Risk Associate", F)
+    assert not title_wide("Wealth Management Associate - TX, Dallas", F) and not title_wide("Scheduling Coordinator", F)
+    assert not title_wide("Research Associate, Antibody Discovery", F) and not title_wide("Operations Specialist", F)
     assert not title_wide("Store Associate", F) and not title_wide("Data Analyst", F) and not title_wide("Claims Analyst", F)
     assert skills_ok("Excel") and not skills_ok("Excel", office=False)

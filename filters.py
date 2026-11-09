@@ -97,11 +97,15 @@ def title_ok(title, f):
 
 
 WIDE = ["associate", "specialist", "consultant", "coordinator", "intern", "internship", "co-op"]
+# wide roles need a data, supply chain or markets word; "wealth", "sales" or "research" alone pull in advisors, retail and lab work
+WIDE_DOMAINS = CORE_DOMAINS + ["investment", "investments", "portfolio", "capital markets", "trading", "quantitative", "valuation",
+                               "derivatives", "inventory", "logistics", "materials", "planning", "settlements", "structuring",
+                               "fundamentals", "commodity", "commodities", "revenue", "credit", "risk"]
 
 
 def title_wide(title, f):
     # "Associate, Tax-Driven Investments" never says analyst, its posting has to name a real data tool
-    return (not title_ok(title, f) and bool(_matches(f["title_include"], title))
+    return (not title_ok(title, f) and bool(_matches(WIDE_DOMAINS, title))
             and any(r in WIDE for r, _ in _roles(title, f)))
 
 

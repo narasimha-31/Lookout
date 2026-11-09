@@ -54,7 +54,8 @@ def check(company, f, before=None, model=None):
     new = [j for j in jobs_ok if j.id not in seen]
     skipped = [j for j in new if not flt.location_ok(j.location, f)]
     # the rest still gets stored, duplicates are ignored by the database
-    others = [j for j in jobs if j not in jobs_ok]
+    ok_ids = {j.id for j in jobs_ok}
+    others = [j for j in jobs if j.id not in ok_ids]
     if skipped or others:
         db.save_jobs([_row(company, j) for j in skipped + others])
 
