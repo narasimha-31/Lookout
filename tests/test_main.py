@@ -273,6 +273,17 @@ def test_weekly_audit_needs_most_postings_to_say_no(world, monkeypatch):
     assert paused == []
 
 
+def test_weekly_audit_ignores_internships(world, monkeypatch):
+    paused = []
+    monkeypatch.setattr(main.db, "pause", lambda cid, note: paused.append(cid))
+    monkeypatch.setattr(main.db, "companies", lambda: [company(1)])
+    titles = ["Data Analyst Intern", "Analyst Internship", "Analyst Co-op", "Summer Analyst Program", "Data Analyst"]
+    world["jobs"] = [job(i, t) for i, t in enumerate(titles, 1)]
+    world["jd"] = {str(i): "<p>No sponsorship for this role. SQL daily.</p>" for i in range(1, 5)}
+    main.audit()
+    assert paused == []
+
+
 def test_weekly_audit_skips_places_the_posting_page_fills_in(world, monkeypatch):
     paused = []
     monkeypatch.setattr(main.db, "pause", lambda cid, note: paused.append(cid))

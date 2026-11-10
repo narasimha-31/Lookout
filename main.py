@@ -1,5 +1,6 @@
 import hashlib
 import os
+import re
 import sys
 import traceback
 from concurrent.futures import ThreadPoolExecutor
@@ -213,8 +214,10 @@ AUDIT_BLOCK = 4
 
 def _audit_one(c, f):
     """Returns (descriptions read, the dealbreaker lines found) for the company's newest matching jobs."""
+    # student programs carry their own sponsorship line, it says nothing about full-time roles
     jobs = [j for j in fetchers.fetch_list(c, NEWEST)
-            if (flt.title_ok(j.title, f) or flt.title_maybe(j.title, f)) and flt.location_ok(j.location, f)]
+            if (flt.title_ok(j.title, f) or flt.title_maybe(j.title, f)) and flt.location_ok(j.location, f)
+            and not re.search(r"\bintern(s|ship)?\b|co-?op\b|summer analyst", j.title, re.I)]
     read, hits = 0, []
     for job in jobs:
         if read == AUDIT_JDS:
