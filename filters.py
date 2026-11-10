@@ -35,7 +35,7 @@ WORK = ["business intelligence", "analytics",
 # data tools from the resume
 SKILLS = ["sql", "python", "power bi", "power query", "dax", "tableau", "looker", "snowflake", "etl", "pandas", "postgresql",
           "sql server", "bigquery", "airflow", "dbt", "kafka", "gis", "esri", "qgis", "postgis", "arcgis", "databricks",
-          "sas", "alteryx", "spark", "pyspark", "redshift", "azure data factory", "synapse", "mysql", "qlik", "ssrs", "ssis",
+          "alteryx", "spark", "pyspark", "redshift", "azure data factory", "synapse", "mysql", "qlik", "ssrs", "ssis",
           "spotfire", "aws", "azure", "gcp", "google cloud"]
 # a bare "R" is too common a letter, only clear uses count
 R_TOOL = re.compile(r"\bRStudio\b|\bR (programming|language|studio)\b|(?<![\w&-])R\s*/|/\s*R(?![\w&'-])")
@@ -269,9 +269,11 @@ def student_only(title, text):
     return bool(re.search(r"\bintern(ship)?\b|co-op", title, re.I) and STUDENT.search(text))
 
 
-PREFERRED = re.compile(r"(preferred|desired|additional) (qualifications?|skills|experience|requirements)|nice[- ]to[- ]haves?"
+# "additional requirements" are still requirements, only extra qualifications are wishes
+PREFERRED = re.compile(r"(preferred|desired) (qualifications?|skills|experience|requirements)|additional (qualifications?|skills|experience)"
+                       r"|nice[- ]to[- ]haves?"
                        r"|bonus points|preferred:", re.I)
-HEADING = re.compile(r"(required|basic|minimum|must[- ]haves?|qualifications|requirements|what you|who you|about you"
+HEADING = re.compile(r"(additional requirements|required|basic|minimum|must[- ]haves?|qualifications|requirements|what you|who you|about you"
                      r"|your experience|experience|skills|education|responsibilities)\b", re.I)
 HISTORY = re.compile(r"award|winn|history|founded|\bserv(e|es|ed|ing)\b|been in business|in business for|leader|anniversar|legacy|celebrat"
                      r"|\bour \d|\bwe('ve| have)\b|company has", re.I)
@@ -285,7 +287,7 @@ DEGREES = re.compile(r"bachelor|master|degree|\bBS\b|\bMS\b|equivalent", re.I)
 
 def _required_lines(text):
     # headings glued to the line before, like "teamsPreferred Qualifications:"
-    text = PREFERRED.sub(lambda m: "\n" + m.group(0), text.replace("’", "'"))
+    text = re.sub("additional requirements|" + PREFERRED.pattern, lambda m: "\n" + m.group(0), text.replace("’", "'"), flags=re.I)
     keep, preferred = [], False
     for line in text.splitlines():
         s = line.strip(" -*•\t")

@@ -276,3 +276,17 @@ def test_cloud_and_business_titles_without_analyst():
     assert not title_wide("Research Associate, Antibody Discovery", F) and not title_wide("Operations Specialist", F)
     assert not title_wide("Store Associate", F) and not title_wide("Data Analyst", F) and not title_wide("Claims Analyst", F)
     assert skills_ok("Excel") and not skills_ok("Excel", office=False)
+
+
+def test_additional_requirements_still_count():
+    jd = ("Preferred Qualifications\nTwo or more years of analytical experience.\nWorking knowledge of SAP.\n"
+          "Additional Requirements\nAbility to manage multiple responsibilities.\n"
+          "The Specialist/Analyst level requires a bachelor's degree or equivalent experience and 2-5 years of relevant job-related experience\n"
+          "The Senior Specialist/Analyst level requires a bachelor's degree or equivalent experience and 5-8 years of relevant job-related experience")
+    assert years_required(jd) == 2
+    assert years_required("Additional Qualifications\n5+ years of experience with Tableau") is None
+
+
+def test_sas_alone_is_not_a_known_tool():
+    assert not skills_ok("Develop SAS programs for the creation of ADaM data sets following CDISC standards.")
+    assert skills_ok("Reporting in SAS and SQL")
