@@ -221,7 +221,9 @@ def _audit_one(c, f):
             break
         text = flt.html_to_text(fetchers.fetch_detail(c, job))
         # only us jobs count, some boards list no location so the description has to say
-        if not (flt.title_ok(job.title, f) or flt.skills_ok(text)) or flt.abroad(job.location, text, f):
+        # the posting page can fill in a place the list left as "2 Locations"
+        if (not (flt.title_ok(job.title, f) or flt.skills_ok(text)) or not flt.location_ok(job.location, f)
+                or flt.abroad(job.location, text, f)):
             continue
         read += 1
         hits += flt.dealbreakers(text, f)[:1]
@@ -244,7 +246,8 @@ def audit():
     paused, close = [], []
     day = datetime.now(ZoneInfo("America/Chicago")).strftime("%Y-%m-%d")
     for c, (read, hits) in zip(companies, results):
-        if len(hits) >= AUDIT_BLOCK:
+        # 4 of 10 can be one internship program's wording, so most of them have to say it
+        if len(hits) >= AUDIT_BLOCK and len(hits) * 2 > read:
             db.pause(c["id"], f"blocked: no sponsorship {len(hits)}/{read} (weekly check {day})")
             paused.append(f"{c['name']}: {len(hits)} of {read}, e.g. {hits[0][:110]}")
         elif hits:

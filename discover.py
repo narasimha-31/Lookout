@@ -60,7 +60,7 @@ def judge(c, f):
     if not data:
         return None, "no data roles"
     read, hits = _audit_one(c, f)
-    if len(hits) >= AUDIT_BLOCK:
+    if len(hits) >= AUDIT_BLOCK and len(hits) * 2 > read:
         return False, f"blocked: no sponsorship {len(hits)}/{read}"
     return True, f"{len(data)} data roles, {len(hits)}/{read} say no sponsorship"
 

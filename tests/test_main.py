@@ -263,6 +263,32 @@ def test_weekly_audit_ignores_jobs_outside_the_us(world, monkeypatch):
     assert paused == []
 
 
+def test_weekly_audit_needs_most_postings_to_say_no(world, monkeypatch):
+    paused = []
+    monkeypatch.setattr(main.db, "pause", lambda cid, note: paused.append(cid))
+    monkeypatch.setattr(main.db, "companies", lambda: [company(1)])
+    world["jobs"] = [job(i) for i in range(1, 11)]
+    world["jd"] = {str(i): "<p>No sponsorship for this role. SQL daily.</p>" for i in range(1, 6)}
+    main.audit()
+    assert paused == []
+
+
+def test_weekly_audit_skips_places_the_posting_page_fills_in(world, monkeypatch):
+    paused = []
+    monkeypatch.setattr(main.db, "pause", lambda cid, note: paused.append(cid))
+    monkeypatch.setattr(main.db, "companies", lambda: [company(1)])
+    world["jobs"] = [job(i, loc="2 Locations") for i in range(1, 9)]
+
+    def detail(c, j):
+        if int(j.id) > 4:
+            j.location = "Taguig, India"
+            return "<p>SQL daily.</p>"
+        return "<p>No sponsorship for this role.</p>"
+    monkeypatch.setattr(main.fetchers, "fetch_detail", detail)
+    main.audit()
+    assert paused == [1]
+
+
 def test_learn_saves_lessons_and_reports_agreement(monkeypatch):
     old = ([{"company_id": 2, "external_job_id": str(i), "title": "Data Analyst", "description": "power bi sql dashboards",
              "label": 1, "fit": None} for i in range(25)]
