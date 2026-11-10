@@ -218,6 +218,9 @@ def _audit_one(c, f):
     jobs = [j for j in fetchers.fetch_list(c, NEWEST)
             if (flt.title_ok(j.title, f) or flt.title_maybe(j.title, f)) and flt.location_ok(j.location, f)
             and not re.search(r"\bintern(s|ship)?\b|co-?op\b|summer analyst", j.title, re.I)]
+    # one job posted in five cities is still one job
+    titles = set()
+    jobs = [j for j in jobs if not (j.title.strip().lower() in titles or titles.add(j.title.strip().lower()))]
     read, hits = 0, []
     for job in jobs:
         if read == AUDIT_JDS:

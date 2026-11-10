@@ -214,7 +214,7 @@ def test_weekly_audit_pauses_companies_that_stopped_sponsoring(world, monkeypatc
     monkeypatch.setattr(main.db, "pause", lambda cid, note: paused.append((cid, note)))
     vc = {**company(3), "platform": "getro"}
     monkeypatch.setattr(main.db, "companies", lambda: [company(1), company(2), vc])
-    world["jobs"] = [job(i) for i in range(1, 7)]
+    world["jobs"] = [job(i, f"Data Analyst {i}") for i in range(1, 7)]
     world["jd"] = {str(i): "<p>No sponsorship for this role.</p>" for i in range(1, 5)}
     main.audit()
     assert [cid for cid, _ in paused] == [1, 2] and "4/6" in paused[0][1]
@@ -225,7 +225,7 @@ def test_weekly_audit_keeps_companies_with_few_hits(world, monkeypatch):
     paused = []
     monkeypatch.setattr(main.db, "pause", lambda cid, note: paused.append(cid))
     monkeypatch.setattr(main.db, "companies", lambda: [company(1)])
-    world["jobs"] = [job(i) for i in range(1, 12)]
+    world["jobs"] = [job(i, f"Data Analyst {i}") for i in range(1, 12)]
     world["jd"] = {str(i): "<p>No sponsorship for this role.</p>" for i in range(1, 4)}
     main.audit()
     assert paused == [] and world["sent"] == ["Lookout weekly: 0 paused"]
@@ -257,7 +257,7 @@ def test_weekly_audit_ignores_jobs_outside_the_us(world, monkeypatch):
     paused = []
     monkeypatch.setattr(main.db, "pause", lambda cid, note: paused.append(cid))
     monkeypatch.setattr(main.db, "companies", lambda: [company(1)])
-    world["jobs"] = [job(i, loc="") for i in range(1, 6)]
+    world["jobs"] = [job(i, f"Data Analyst {i}", "") for i in range(1, 6)]
     world["jd"] = {str(i): "<p>Based in Bengaluru, India. No sponsorship for this role.</p>" for i in range(1, 6)}
     main.audit()
     assert paused == []
@@ -267,8 +267,18 @@ def test_weekly_audit_needs_most_postings_to_say_no(world, monkeypatch):
     paused = []
     monkeypatch.setattr(main.db, "pause", lambda cid, note: paused.append(cid))
     monkeypatch.setattr(main.db, "companies", lambda: [company(1)])
-    world["jobs"] = [job(i) for i in range(1, 11)]
+    world["jobs"] = [job(i, f"Data Analyst {i}") for i in range(1, 11)]
     world["jd"] = {str(i): "<p>No sponsorship for this role. SQL daily.</p>" for i in range(1, 6)}
+    main.audit()
+    assert paused == []
+
+
+def test_weekly_audit_counts_a_title_once(world, monkeypatch):
+    paused = []
+    monkeypatch.setattr(main.db, "pause", lambda cid, note: paused.append(cid))
+    monkeypatch.setattr(main.db, "companies", lambda: [company(1)])
+    world["jobs"] = [job(i, "Risk Analyst") for i in range(1, 5)] + [job(5, "Data Analyst"), job(6, "BI Analyst")]
+    world["jd"] = {str(i): "<p>No sponsorship for this role. SQL daily.</p>" for i in range(1, 5)}
     main.audit()
     assert paused == []
 
@@ -288,7 +298,7 @@ def test_weekly_audit_skips_places_the_posting_page_fills_in(world, monkeypatch)
     paused = []
     monkeypatch.setattr(main.db, "pause", lambda cid, note: paused.append(cid))
     monkeypatch.setattr(main.db, "companies", lambda: [company(1)])
-    world["jobs"] = [job(i, loc="2 Locations") for i in range(1, 9)]
+    world["jobs"] = [job(i, f"Data Analyst {i}", "2 Locations") for i in range(1, 9)]
 
     def detail(c, j):
         if int(j.id) > 4:
