@@ -86,8 +86,8 @@ def _roles(title, f):
 
 
 def max_years(title):
-    # junior bar for now: engineers one year, other roles two
-    return 1 if re.search(r"\bengineer", title, re.I) else 2
+    # data engineers stay at 2 years or less, other roles take "3+"
+    return 2 if re.search(r"\bengineer", title, re.I) else 3
 
 
 def title_ok(title, f):
@@ -314,8 +314,8 @@ def years_required(text):
             if re.search(r"prefer|nice to have|a plus|bonus", s[m.end():m.end() + 30], re.I):
                 continue
             nums = [NUMBER_WORDS.get(x.lower()) or int(x) for x in re.findall(r"\d{1,2}|" + "|".join(NUMBER_WORDS), m.group(0), re.I)]
-            # "2-4 years" is a four year job, while "1-4" still takes juniors
-            n = nums[-1] if nums[0] >= 2 else nums[0]
+            # "3-5 years" is a five year job, while "1-4" still takes juniors
+            n = nums[-1] if nums[0] >= 3 else nums[0]
             # bigger numbers are company history, like "over 30 years of experience"
             if n <= 15:
                 (plain if GENERAL.match(s[m.end():]) else narrow).append(n)

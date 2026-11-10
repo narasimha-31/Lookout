@@ -86,21 +86,21 @@ def test_rejected_jobs_are_saved_not_emailed(world):
 
 def test_experience_cutoff(world):
     world["jobs"] = [job(1), job(2), job(3)]
-    world["jd"] = {"1": "<p>3 years of experience</p>", "2": "<p>1-3 years of experience with SQL</p>",
+    world["jd"] = {"1": "<p>4-6 years of experience</p>", "2": "<p>1-3 years of experience with SQL</p>",
                    "3": "<p>2+ years of experience with Tableau</p>"}
     assert main.check(company(), F)[0] == 2
 
 
-def test_analysts_two_years_engineers_one(world):
-    world["jobs"] = [job(1, "Data Engineer"), job(2, "Data Engineer II"), job(3, "Data Analyst"), job(4, "Data Analyst")]
-    world["jd"] = {"1": "<p>2 years of experience with SQL</p>", "2": "<p>1+ years of experience with SQL</p>",
-                   "3": "<p>3+ years of experience with SQL</p>", "4": "<p>2 years of experience with SQL</p>"}
+def test_every_role_caps_at_three_years(world):
+    world["jobs"] = [job(1, "Data Engineer"), job(2, "Data Engineer II"), job(3, "Data Analyst")]
+    world["jd"] = {"1": "<p>3 years of experience with SQL</p>", "2": "<p>2 years of experience with SQL</p>",
+                   "3": "<p>3+ years of experience with SQL</p>"}
     assert main.check(company(), F)[0] == 2
 
 
-def test_senior_titles_same_bar(world):
+def test_senior_titles_cap_at_three_years(world):
     world["jobs"] = [job(1, "Senior Data Analyst"), job(2, "Sr. Analytics Analyst"), job(3, "Senior Data Engineer")]
-    world["jd"] = {"1": "<p>3+ years of experience with SQL</p>", "2": "<p>2 years of experience with SQL</p>",
+    world["jd"] = {"1": "<p>4+ years of experience with SQL</p>", "2": "<p>3 years of experience with SQL</p>",
                    "3": "<p>Great team, SQL daily</p>"}
     # no years stated still goes out, the reader may have missed them
     assert main.check(company(), {**F, "title_exclude": []})[0] == 2
@@ -246,7 +246,7 @@ def test_unreadable_posting_is_sent_with_its_link(world, monkeypatch):
 
 def test_senior_titles_need_a_low_years_ask(world):
     world["jobs"] = [job(1, "Senior Data Analyst"), job(2, "Sr. Data Analyst"), job(3, "Senior Data Analyst II")]
-    world["jd"] = {"1": "<p>1-2 years of experience in SQL</p>", "2": "<p>5+ years of experience</p>", "3": "<p>Great team, Python daily</p>"}
+    world["jd"] = {"1": "<p>2-3 years of experience in SQL</p>", "2": "<p>5+ years of experience</p>", "3": "<p>Great team, Python daily</p>"}
     f = {**F, "title_exclude": []}
     assert main.check(company(), f)[0] == 2
     assert world["sent"] == ["New role at Acme: Senior Data Analyst, Houston, TX",
