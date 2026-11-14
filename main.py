@@ -37,9 +37,11 @@ def _row(company, job, emailed=False, repost=False, description=None, score=None
             "url": job.url, "emailed": emailed, "possible_repost": repost, "description": description, "fit": score}
 
 
-def check(company, f, before=None, model=None):
+def check(company, f, before=None, model=None, save=None):
     """Returns (emails sent, jobs listed, fingerprint of the job list)."""
     f = {**f, **{k: v for k, v in (company.get("overrides") or {}).items() if k in f}}
+    # a run hands in one list, so unsent rows from every company go to the database together
+    save = save or db.save_jobs
     # after the first check only the newest jobs matter
     newest = PAGED_NEWEST.get(company["platform"], NEWEST) if company["first_run_done"] else FIRST_CHECK
     jobs = list({j.id: j for j in fetchers.fetch_list(company, newest)}.values())
@@ -64,7 +66,7 @@ def check(company, f, before=None, model=None):
     ok_ids = {j.id for j in jobs_ok}
     others = [j for j in jobs if j.id not in ok_ids]
     if skipped or others:
-        db.save_jobs([_row(company, j) for j in skipped + others])
+        save([_row(company, j) for j in skipped + others])
 
     sent = 0
     skipped_ids = {j.id for j in skipped}
@@ -82,7 +84,7 @@ def check(company, f, before=None, model=None):
                 or not flt.location_ok(job.location, f)
                 or flt.abroad(job.location, text if job.location else f"{job.title}\n{text}", f)
                 or (years is not None and years > flt.max_years(job.title))):
-            db.save_jobs([_row(company, job)])
+            save([_row(company, job)])
             continue
         repost = db.is_repost(company["id"], job.title, job.location)
         flags = [f"asks for {years} years" if years is not None else "no experience mentioned"]
@@ -118,13 +120,13 @@ def _quietly(fn, *args, **kw):
         return None
 
 
-def _one(c, f, before, model=None):
+def _one(c, f, before, model=None, save=None):
     """Returns (emails sent, failed, health row, down alert)."""
     row = {"company_id": c["id"], "last_success_at": before.get("last_success_at"),
            "last_job_count": before.get("last_job_count"), "last_error": before.get("last_error"),
            "ids_hash": before.get("ids_hash")}
     try:
-        n, count, fingerprint = check(c, f, before, model)
+        n, count, fingerprint = check(c, f, before, model, save)
     except Exception as e:
         error = f"{type(e).__name__}: {e}"[:1000]
         last_ok = before.get("last_success_at")
@@ -157,12 +159,12 @@ def run():
     health = db.all_health()
     model = db.fit_model()
     # companies sit on different job boards, so a few at once is still polite
-    took = {}
+    took, unsent = {}, []
 
     def timed(c):
         start = time.monotonic()
         try:
-            return _one(c, f, health.get(c["id"]) or {}, model)
+            return _one(c, f, health.get(c["id"]) or {}, model, unsent.extend)
         finally:
             took[c["id"]] = (time.monotonic() - start, c["platform"])
 
@@ -171,6 +173,8 @@ def run():
         results = list(pool.map(timed, companies))
     slowest = ", ".join(f"{p} {s:.0f}s" for s, p in sorted(took.values(), reverse=True)[:10])
     print(f"work {sum(s for s, _ in took.values()):.0f}s over 12 workers, took {time.monotonic() - start:.0f}s, slowest {slowest}")
+    if unsent:
+        _quietly(db.save_jobs, unsent)
     _quietly(db.save_health, [r[2] for r in results])
     # an outage spreads, later boards on a site already reported are the same news
     known = Counter(c["platform"] for c in companies

@@ -113,9 +113,9 @@ def is_repost(company_id, title, location):
 
 
 def save_jobs(rows):
-    for i in range(0, len(rows), 500):
+    for i in range(0, len(rows), 2000):
         http("POST", _url("seen_jobs"), headers=_headers("resolution=ignore-duplicates,return=minimal"),
-             params={"on_conflict": "company_id,external_job_id"}, json=rows[i:i + 500])
+             params={"on_conflict": "company_id,external_job_id"}, json=rows[i:i + 2000])
 
 
 def mark_first_run(company_id):

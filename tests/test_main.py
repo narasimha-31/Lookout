@@ -412,3 +412,12 @@ def test_many_boards_with_zero_jobs_send_one_email(world, monkeypatch):
         world["health"][i] = {"last_job_count": 10}
     main.run()
     assert world["sent"] == ["5 job boards are not responding"]
+
+
+def test_run_saves_unsent_jobs_in_one_request(world, monkeypatch):
+    monkeypatch.setattr(main.db, "companies", lambda: [company(1), company(2), company(3)])
+    world["jobs"] = [job(1, title="Nurse"), job(2, title="Chef")]
+    calls = []
+    monkeypatch.setattr(main.db, "save_jobs", lambda rows: calls.append(len(rows)))
+    main.run()
+    assert calls == [6]
