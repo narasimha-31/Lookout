@@ -16,8 +16,8 @@ import fit
 import mail
 
 NEWEST = 200
-# these two serve 10 or 20 a page, so 200 costs most of the run; neither posts 100 jobs in ten minutes
-PAGED_NEWEST = {"workday": 100, "dejobs": 100}
+# these two serve 10 or 20 a page; dejobs is read one company at a time, so its pages set the run length
+PAGED_NEWEST = {"workday": 100, "dejobs": 50}
 # vc boards list tens of thousands of jobs worldwide
 FIRST_CHECK = 2000
 
