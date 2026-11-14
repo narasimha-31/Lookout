@@ -4,6 +4,7 @@ import re
 import sys
 import time
 import traceback
+from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
@@ -130,7 +131,7 @@ def _one(c, f, before, model=None):
         # short blips like rate limits are normal, only report boards down for over an hour
         down_long = not last_ok or datetime.fromisoformat(last_ok) < datetime.now(timezone.utc) - timedelta(hours=1)
         notified = (before.get("last_error") or "").startswith("notified: ")
-        alert = (c["name"], error) if down_long and not notified else None
+        alert = (c["name"], error, c["platform"]) if down_long and not notified else None
         if down_long or notified:
             error = "notified: " + error
         return 0, 1, {**row, "last_error": error}, alert
@@ -170,7 +171,10 @@ def run():
     slowest = ", ".join(f"{p} {s:.0f}s" for s, p in sorted(took.values(), reverse=True)[:10])
     print(f"work {sum(s for s, _ in took.values()):.0f}s over 12 workers, took {time.monotonic() - start:.0f}s, slowest {slowest}")
     _quietly(db.save_health, [r[2] for r in results])
-    down = [r[3] for r in results if r[3]]
+    # an outage spreads, later boards on a site already reported are the same news
+    known = Counter(c["platform"] for c in companies
+                    if ((health.get(c["id"]) or {}).get("last_error") or "").startswith("notified: "))
+    down = [r[3][:2] for r in results if r[3] and known[r[3][2]] <= 3]
     # a whole job site going down is one piece of news, not a hundred
     if len(down) > 3:
         _quietly(mail.send, mail.notice(f"{len(down)} job boards are not responding",

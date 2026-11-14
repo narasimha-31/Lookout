@@ -395,3 +395,12 @@ def test_run_prints_where_the_time_went(world, monkeypatch, capsys):
     main.run()
     assert re.match(r"work \d+s over 12 workers, took \d+s, slowest greenhouse \d+s, greenhouse \d+s$",
                     capsys.readouterr().out.splitlines()[0])
+
+
+def test_late_board_in_a_known_outage_sends_no_email(world, monkeypatch):
+    monkeypatch.setattr(main.db, "companies", lambda: [company(i) for i in range(1, 6)])
+    for i in range(1, 5):
+        world["health"][i] = {"last_error": "notified: HTTPError: 521"}
+    world["fail"] = {1, 2, 3, 4, 5}
+    main.run()
+    assert world["sent"] == []
