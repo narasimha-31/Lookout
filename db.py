@@ -1,9 +1,18 @@
 import os
+from collections import Counter
 from datetime import datetime, timedelta, timezone
 
 import requests
 
-from fetchers import http
+import fetchers
+
+calls = Counter()
+
+
+def http(method, url, **kw):
+    # supabase bills by logged request, so the run says how many it made
+    calls[f"{method} {url.rsplit('/', 1)[-1]}"] += 1
+    return fetchers.http(method, url, **kw)
 
 
 def _headers(prefer=None):

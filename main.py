@@ -182,6 +182,8 @@ def run():
     else:
         for name, error in down:
             _quietly(mail.send, mail.notice(f"{name} fetch failed", f"Not working for over an hour.\n\n{error}"))
+    if db.calls:
+        print("database requests " + ", ".join(f"{k} {v}" for k, v in db.calls.most_common()))
     sent, failed = sum(r[0] for r in results), sum(r[1] for r in results)
     print(f"checked {len(companies)} companies, {sent} new jobs, {failed} failed")
     return len(companies), sent
