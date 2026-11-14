@@ -116,6 +116,8 @@ def title_maybe(title, f):
 
 # excel-only roles are wanted too, a bare "access" is too common a word
 OFFICE = ["excel", "sap", "oracle", "microsoft access", "ms access"]
+# longest first so "sql server" wins over "sql"
+TOOLS = re.compile(r"(?<!\w)(?:" + "|".join(sorted(SKILLS + OFFICE, key=len, reverse=True)) + r")(?!\w)", re.I)
 
 
 def skills_ok(text, office=True):

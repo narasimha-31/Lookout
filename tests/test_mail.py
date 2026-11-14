@@ -59,3 +59,25 @@ def test_reactions_trash_wins_and_ignores_unkeyed(monkeypatch):
     monkeypatch.setenv("GMAIL_APP_PASSWORD", "x")
     monkeypatch.setattr(mail.imaplib, "IMAP4_SSL", FakeBox)
     assert mail.reactions() == {"1:a": -1, "1:b": 1}
+
+
+def test_email_highlights_experience_and_tools(monkeypatch):
+    monkeypatch.setenv("GMAIL_USER", "a@b.c")
+    monkeypatch.setenv("ALERT_TO", "a@b.c")
+    job = Job("1", "Analyst - Cost", "Houston, TX", "https://x/1")
+    jd = "<p class='sql'>2-5 years of relevant job-related experience</p><li>Strong SQL and Power BI skills, Excel</li>"
+    rich = mail.job_email("Acme", job, jd, [], "Nov 06").get_body(("html",)).get_content()
+    mark = "<mark style='background:#fff3a3'>"
+    assert f"{mark}2-5 years</mark>" in rich
+    assert f"{mark}SQL</mark>" in rich and f"{mark}Power BI</mark>" in rich and f"{mark}Excel</mark>" in rich
+    # tag attributes are left alone
+    assert "<p class='sql'>" in rich
+    assert "Tools</td><td><b>SQL, Power BI, Excel</b>" in rich
+
+
+def test_email_without_description_has_no_tools_row(monkeypatch):
+    monkeypatch.setenv("GMAIL_USER", "a@b.c")
+    monkeypatch.setenv("ALERT_TO", "a@b.c")
+    job = Job("1", "Data Analyst", "Houston, TX", "https://x/1")
+    rich = mail.job_email("Acme", job, "", [], "Nov 06").get_body(("html",)).get_content()
+    assert "Tools" not in rich and "<mark" not in rich

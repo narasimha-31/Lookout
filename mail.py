@@ -7,7 +7,9 @@ import re
 import smtplib
 from email.message import EmailMessage
 
-from filters import html_to_text, pay
+from filters import TOOLS, YEARS, html_to_text, pay
+
+MARK = re.compile(YEARS.pattern + "|" + TOOLS.pattern, re.I)
 
 
 def _one_line(s):
@@ -32,7 +34,8 @@ def job_email(company, job, jd_html, flags, first_seen, fit=None, key=None):
     salary = pay(text)
     subject = f"New role at {company}: {job.title}, {job.location or 'location not listed'}"
     rows = [("Company", company), ("Title", job.title), ("Location", job.location or "not listed"),
-            ("Pay", salary), ("Fit", fit), ("First seen", first_seen)]
+            ("Pay", salary), ("Tools", ", ".join({m.lower(): m for m in TOOLS.findall(text)}.values())),
+            ("Fit", fit), ("First seen", first_seen)]
     head = "\n".join(f"{k}: {v}" for k, v in rows if v)
     plain = f"{head}\nApply: {job.url}\nFlags: {', '.join(flags)}\n\n{text}"
 
@@ -40,6 +43,9 @@ def job_email(company, job, jd_html, flags, first_seen, fit=None, key=None):
     table = "".join(f"<tr><td style='color:#666;padding-right:12px'>{k}</td><td><b>{e(str(v))}</b></td></tr>"
                     for k, v in rows if v)
     body = re.sub(r"(?is)<(script|style)[^>]*>.*?</\1>", "", jd_html or "")
+    # yellow on years and tools, only in the words between tags
+    body = "".join(p if p.startswith("<") else MARK.sub(lambda m: f"<mark style='background:#fff3a3'>{m.group(0)}</mark>", p)
+                   for p in re.split(r"(<[^>]+>)", body))
     rich = (f"<div style='font-family:Arial,sans-serif;max-width:680px'>"
             f"<table>{table}</table>"
             f"<p><a href='{e(job.url)}' style='display:inline-block;background:#1a73e8;color:#fff;padding:12px 28px;"
