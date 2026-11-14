@@ -117,7 +117,7 @@ def _quietly(fn, *args, **kw):
 
 
 def _one(c, f, before, model=None):
-    """Returns (emails sent, failed, health row)."""
+    """Returns (emails sent, failed, health row, down alert)."""
     row = {"company_id": c["id"], "last_success_at": before.get("last_success_at"),
            "last_job_count": before.get("last_job_count"), "last_error": before.get("last_error"),
            "ids_hash": before.get("ids_hash")}
@@ -129,17 +129,15 @@ def _one(c, f, before, model=None):
         # short blips like rate limits are normal, only report boards down for over an hour
         down_long = not last_ok or datetime.fromisoformat(last_ok) < datetime.now(timezone.utc) - timedelta(hours=1)
         notified = (before.get("last_error") or "").startswith("notified: ")
-        if down_long and not notified:
-            _quietly(mail.send, mail.notice(f"{c['name']} fetch failed", f"Not working for over an hour.\n\n{error}"))
+        alert = (c["name"], error) if down_long and not notified else None
+        if down_long or notified:
             error = "notified: " + error
-        elif notified:
-            error = "notified: " + error
-        return 0, 1, {**row, "last_error": error}
+        return 0, 1, {**row, "last_error": error}, alert
     if count == 0 and (before.get("last_job_count") or 0) > 0:
         _quietly(mail.send, mail.notice(f"{c['name']} returned zero jobs, check it",
                                         "The job board returned no jobs. It may have moved to a new address."))
     return n, 0, {**row, "last_success_at": datetime.now(timezone.utc).isoformat(), "last_job_count": count,
-                  "last_error": None, "ids_hash": fingerprint}
+                  "last_error": None, "ids_hash": fingerprint}, None
 
 
 def workday_down(now=None):
@@ -159,6 +157,14 @@ def run():
     with ThreadPoolExecutor(12) as pool:
         results = list(pool.map(lambda c: _one(c, f, health.get(c["id"]) or {}, model), companies))
     _quietly(db.save_health, [r[2] for r in results])
+    down = [r[3] for r in results if r[3]]
+    # a whole job site going down is one piece of news, not a hundred
+    if len(down) > 3:
+        _quietly(mail.send, mail.notice(f"{len(down)} job boards are not responding",
+                                        "Not working for over an hour.\n\n" + "\n".join(f"{n}: {e[:120]}" for n, e in down)))
+    else:
+        for name, error in down:
+            _quietly(mail.send, mail.notice(f"{name} fetch failed", f"Not working for over an hour.\n\n{error}"))
     sent, failed = sum(r[0] for r in results), sum(r[1] for r in results)
     print(f"checked {len(companies)} companies, {sent} new jobs, {failed} failed")
     return len(companies), sent

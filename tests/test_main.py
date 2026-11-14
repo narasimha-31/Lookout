@@ -379,3 +379,11 @@ def test_paged_boards_read_fewer_jobs(world, monkeypatch):
     main.check({**company(), "platform": "greenhouse"}, F)
     main.check({**company(first_run_done=False), "platform": "workday"}, F)
     assert asked == [("workday", 100), ("greenhouse", 200), ("workday", 2000)]
+
+
+def test_many_boards_down_send_one_email(world, monkeypatch):
+    monkeypatch.setattr(main.db, "companies", lambda: [company(i) for i in range(1, 6)])
+    world["fail"] = {1, 2, 3, 4, 5}
+    main.run()
+    main.run()
+    assert world["sent"] == ["5 job boards are not responding"]
