@@ -19,7 +19,7 @@ def features(title, text):
     return out
 
 
-def train(lessons, epochs=20, rate=0.1, l2=1e-4):
+def train(lessons, epochs=5, rate=0.01, l2=1e-4):
     """Logistic regression over (title, text, +1 or -1) lessons, or None until there are enough of each."""
     good = sum(1 for *_, y in lessons if y > 0)
     bad = len(lessons) - good
