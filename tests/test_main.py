@@ -1,3 +1,4 @@
+import re
 from datetime import datetime, timezone
 import pytest
 
@@ -143,7 +144,7 @@ def test_one_failing_company_does_not_stop_others(world, monkeypatch, capsys):
     assert main.run() == (2, 1)
     assert sorted(world["sent"]) == ["Acme fetch failed", "New role at Acme: Data Analyst, Houston, TX"]
     out = capsys.readouterr().out
-    assert out.strip() == "checked 2 companies, 1 new jobs, 1 failed"
+    assert out.splitlines()[-1] == "checked 2 companies, 1 new jobs, 1 failed"
 
 
 def test_failure_alert_only_once_and_recovery_clears(world, monkeypatch):
@@ -387,3 +388,10 @@ def test_many_boards_down_send_one_email(world, monkeypatch):
     main.run()
     main.run()
     assert world["sent"] == ["5 job boards are not responding"]
+
+
+def test_run_prints_where_the_time_went(world, monkeypatch, capsys):
+    monkeypatch.setattr(main.db, "companies", lambda: [company(1), company(2)])
+    main.run()
+    assert re.match(r"work \d+s over 12 workers, took \d+s, slowest greenhouse \d+s, greenhouse \d+s$",
+                    capsys.readouterr().out.splitlines()[0])

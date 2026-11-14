@@ -2,6 +2,7 @@ import hashlib
 import os
 import re
 import sys
+import time
 import traceback
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
@@ -154,8 +155,20 @@ def run():
     health = db.all_health()
     model = db.fit_model()
     # companies sit on different job boards, so a few at once is still polite
+    took = {}
+
+    def timed(c):
+        start = time.monotonic()
+        try:
+            return _one(c, f, health.get(c["id"]) or {}, model)
+        finally:
+            took[c["id"]] = (time.monotonic() - start, c["platform"])
+
+    start = time.monotonic()
     with ThreadPoolExecutor(12) as pool:
-        results = list(pool.map(lambda c: _one(c, f, health.get(c["id"]) or {}, model), companies))
+        results = list(pool.map(timed, companies))
+    slowest = ", ".join(f"{p} {s:.0f}s" for s, p in sorted(took.values(), reverse=True)[:10])
+    print(f"work {sum(s for s, _ in took.values()):.0f}s over 12 workers, took {time.monotonic() - start:.0f}s, slowest {slowest}")
     _quietly(db.save_health, [r[2] for r in results])
     down = [r[3] for r in results if r[3]]
     # a whole job site going down is one piece of news, not a hundred
