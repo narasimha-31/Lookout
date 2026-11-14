@@ -81,3 +81,26 @@ def test_email_without_description_has_no_tools_row(monkeypatch):
     job = Job("1", "Data Analyst", "Houston, TX", "https://x/1")
     rich = mail.job_email("Acme", job, "", [], "Nov 06").get_body(("html",)).get_content()
     assert "Tools" not in rich and "<mark" not in rich
+
+
+def test_plain_text_description_keeps_its_paragraphs(monkeypatch):
+    monkeypatch.setenv("GMAIL_USER", "a@b.c")
+    monkeypatch.setenv("ALERT_TO", "a@b.c")
+    job = Job("1", "Ops Analyst", "Pennington, NJ", "https://x/1")
+    jd = ("**To proceed, you must be at least 18 years of age.**\n  \n\n  \n**Job Description:**\nHandles tax reporting & more.\n\n"
+          "+ Proficient in Excel\n+ 3+ years of experience in reporting\n§ Link (https://x/job\_1)")
+    rich = mail.job_email("Acme", job, jd, [], "Nov 06").get_body(("html",)).get_content()
+    mark = "<mark style='background:#fff3a3'>"
+    assert "<p><b>To proceed, you must be at least 18 years of age.</b></p>" in rich
+    assert "<p><b>Job Description:</b><br>Handles tax reporting &amp; more.</p>" in rich
+    assert f"• Proficient in {mark}Excel</mark><br>• {mark}3+ years</mark> of experience" in rich
+    assert "job_1" in rich
+
+
+def test_only_experience_years_are_highlighted(monkeypatch):
+    monkeypatch.setenv("GMAIL_USER", "a@b.c")
+    monkeypatch.setenv("ALERT_TO", "a@b.c")
+    job = Job("1", "Ops Analyst", "Pennington, NJ", "https://x/1")
+    jd = "<p>Must be 18 years of age. We have led the field for 30 years.</p><p>Minimum 2 years experience with SQL.</p>"
+    rich = mail.job_email("Acme", job, jd, [], "Nov 06").get_body(("html",)).get_content()
+    assert rich.count("<mark") == 2 and ">2 years</mark>" in rich and ">SQL</mark>" in rich

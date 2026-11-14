@@ -12,6 +12,25 @@ from filters import TOOLS, YEARS, html_to_text, pay
 MARK = re.compile(YEARS.pattern + "|" + TOOLS.pattern, re.I)
 
 
+def _highlight(p):
+    def hit(m):
+        s = m.group(0)
+        if not TOOLS.fullmatch(s):
+            # "18 years of age" and "30 years in business" are not asks, the words around the number tell
+            near = p[max(0, m.start() - 80):m.end() + 80].lower()
+            if re.match(r"\s*(of age|old)\b", p[m.end():], re.I) or not ("experience" in near or "+" in s):
+                return s
+        return f"<mark style='background:#fff3a3'>{s}</mark>"
+    return MARK.sub(hit, p)
+
+
+def _paragraphs(text):
+    # some boards send plain text with markdown stars, which an email would run together
+    text = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", html.escape(text.replace("\\_", "_"), quote=False))
+    text = re.sub(r"(?m)^[ \t]*[+§][ \t]+", "• ", text)
+    return "".join(f"<p>{p.strip().replace(chr(10), '<br>')}</p>" for p in re.split(r"\n\s*\n", text) if p.strip())
+
+
 def _one_line(s):
     return " ".join(str(s).split())
 
@@ -43,9 +62,10 @@ def job_email(company, job, jd_html, flags, first_seen, fit=None, key=None):
     table = "".join(f"<tr><td style='color:#666;padding-right:12px'>{k}</td><td><b>{e(str(v))}</b></td></tr>"
                     for k, v in rows if v)
     body = re.sub(r"(?is)<(script|style)[^>]*>.*?</\1>", "", jd_html or "")
+    if not re.search(r"<\w+[^>]*>", body):
+        body = _paragraphs(body)
     # yellow on years and tools, only in the words between tags
-    body = "".join(p if p.startswith("<") else MARK.sub(lambda m: f"<mark style='background:#fff3a3'>{m.group(0)}</mark>", p)
-                   for p in re.split(r"(<[^>]+>)", body))
+    body = "".join(p if p.startswith("<") else _highlight(p) for p in re.split(r"(<[^>]+>)", body))
     rich = (f"<div style='font-family:Arial,sans-serif;max-width:680px'>"
             f"<table>{table}</table>"
             f"<p><a href='{e(job.url)}' style='display:inline-block;background:#1a73e8;color:#fff;padding:12px 28px;"
