@@ -176,7 +176,7 @@ def test_zero_jobs_warns_once(world, monkeypatch):
     world["health"][1] = {"last_job_count": 10}
     main.run()
     main.run()
-    assert world["sent"] == ["Acme returned zero jobs, check it"]
+    assert world["sent"] == ["Acme returned zero jobs"]
 
 
 def test_crash_prints_no_details(world, monkeypatch, capsys):
@@ -404,3 +404,11 @@ def test_late_board_in_a_known_outage_sends_no_email(world, monkeypatch):
     world["fail"] = {1, 2, 3, 4, 5}
     main.run()
     assert world["sent"] == []
+
+
+def test_many_boards_with_zero_jobs_send_one_email(world, monkeypatch):
+    monkeypatch.setattr(main.db, "companies", lambda: [company(i) for i in range(1, 6)])
+    for i in range(1, 6):
+        world["health"][i] = {"last_job_count": 10}
+    main.run()
+    assert world["sent"] == ["5 job boards are not responding"]

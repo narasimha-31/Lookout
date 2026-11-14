@@ -131,15 +131,16 @@ def _one(c, f, before, model=None):
         # short blips like rate limits are normal, only report boards down for over an hour
         down_long = not last_ok or datetime.fromisoformat(last_ok) < datetime.now(timezone.utc) - timedelta(hours=1)
         notified = (before.get("last_error") or "").startswith("notified: ")
-        alert = (c["name"], error, c["platform"]) if down_long and not notified else None
+        alert = (f"{c['name']} fetch failed", f"Not working for over an hour.\n\n{error}", c["platform"]) if down_long and not notified else None
         if down_long or notified:
             error = "notified: " + error
         return 0, 1, {**row, "last_error": error}, alert
+    alert = None
     if count == 0 and (before.get("last_job_count") or 0) > 0:
-        _quietly(mail.send, mail.notice(f"{c['name']} returned zero jobs, check it",
-                                        "The job board returned no jobs. It may have moved to a new address."))
+        alert = (f"{c['name']} returned zero jobs", "The job board returned no jobs. It may be under maintenance, "
+                 "have nothing posted right now, or have moved to a new address.", c["platform"])
     return n, 0, {**row, "last_success_at": datetime.now(timezone.utc).isoformat(), "last_job_count": count,
-                  "last_error": None, "ids_hash": fingerprint}, None
+                  "last_error": None, "ids_hash": fingerprint}, alert
 
 
 def workday_down(now=None):
@@ -178,10 +179,11 @@ def run():
     # a whole job site going down is one piece of news, not a hundred
     if len(down) > 3:
         _quietly(mail.send, mail.notice(f"{len(down)} job boards are not responding",
-                                        "Not working for over an hour.\n\n" + "\n".join(f"{n}: {e[:120]}" for n, e in down)))
+                                        "Down for over an hour or returning no jobs. Often maintenance.\n\n"
+                                        + "\n".join(subject for subject, _ in down)))
     else:
-        for name, error in down:
-            _quietly(mail.send, mail.notice(f"{name} fetch failed", f"Not working for over an hour.\n\n{error}"))
+        for subject, body in down:
+            _quietly(mail.send, mail.notice(subject, body))
     if db.calls:
         print("database requests " + ", ".join(f"{k} {v}" for k, v in db.calls.most_common()))
     sent, failed = sum(r[0] for r in results), sum(r[1] for r in results)
