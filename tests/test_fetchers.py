@@ -658,3 +658,13 @@ def test_phenom_searches_huge_boards_by_term(monkeypatch):
     # the same job found under two terms is listed once
     assert [j.id for j in fetchers.fetch_list(c, 200)] == ["A1"]
     assert [k[2]["params"].get("keywords") for k in calls] == ["analyst", "engineer"]
+
+
+def test_workday_peek_reads_one_page(monkeypatch):
+    calls = []
+    posts = [{"externalPath": f"/job/{i}", "title": "Analyst"} for i in range(20)] + [{"bulletFields": ["x"]}]
+    monkeypatch.setattr(fetchers, "http", fake_http({"/jobs": Resp({"total": 300, "jobPostings": posts})}, calls))
+    c = {"platform": "workday", "board": "acme.wd5.myworkdayjobs.com/acme", "site": "Careers", "overrides": {}}
+    assert fetchers.peek(c) == [f"/job/{i}" for i in range(20)]
+    assert len(calls) == 1
+    assert fetchers.peek({"platform": "greenhouse", "board": "acme"}) is None

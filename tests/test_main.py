@@ -24,6 +24,7 @@ def world(monkeypatch):
         w["sent"].append(msg["Subject"])
 
     monkeypatch.setattr(main.fetchers, "fetch_list", fetch_list)
+    monkeypatch.setattr(main.fetchers, "peek", lambda c: None)
     monkeypatch.setattr(main.fetchers, "fetch_detail", lambda c, j: w["jd"].get(j.id, "<p>Great job using SQL</p>"))
     monkeypatch.setattr(main.db, "save_jobs", lambda rows: w["saved"].extend(rows))
     monkeypatch.setattr(main.db, "seen_ids", lambda cid, ids: {r["external_job_id"] for r in w["saved"]} & set(ids))
@@ -421,3 +422,13 @@ def test_run_saves_unsent_jobs_in_one_request(world, monkeypatch):
     monkeypatch.setattr(main.db, "save_jobs", lambda rows: calls.append(len(rows)))
     main.run()
     assert calls == [6]
+
+
+def test_unchanged_first_page_skips_the_full_read(world, monkeypatch):
+    c = {**company(), "platform": "workday"}
+    monkeypatch.setattr(main.fetchers, "peek", lambda c: ["/job/2", "/job/1"])
+    world["jobs"] = [job(1), job(2)]
+    sent, count, top = main.check(c, F, {})
+    assert (sent, count) == (2, 2)
+    monkeypatch.setattr(main.fetchers, "fetch_list", lambda c, newest=None: 1 / 0)
+    assert main.check(c, F, {"ids_hash": top, "last_job_count": 2}) == (0, 2, top)

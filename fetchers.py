@@ -92,6 +92,16 @@ def _workday_base(c):
     return host, f"https://{host}/wday/cxs/{tenant}/{c['site']}"
 
 
+def _workday_peek(c):
+    # new jobs land on the first page, so one request tells whether anything changed
+    _, base = _workday_base(c)
+    o = c.get("overrides") or {}
+    return [p["externalPath"] for term in _terms(c)
+            for p in http("POST", f"{base}/jobs", json={"appliedFacets": o.get("workday_facets", {}), "limit": 20, "offset": 0,
+                                                        "searchText": term}).json().get("jobPostings") or []
+            if p.get("externalPath")]
+
+
 def _workday_list(c):
     host, base = _workday_base(c)
     o = c.get("overrides") or {}
@@ -966,6 +976,11 @@ DETAIL = {"greenhouse": _greenhouse_detail, "lever": _lever_detail, "ashby": _as
 def fetch_list(company, newest=None):
     # newest: stop paging after this many, boards list newest first
     return LIST[company["platform"]]({**company, "newest": newest})
+
+
+def peek(company):
+    """Ids on the first page, or None where the board has no cheap first look."""
+    return _workday_peek(company) if company["platform"] == "workday" else None
 
 
 def fetch_detail(company, job):

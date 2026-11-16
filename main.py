@@ -44,8 +44,13 @@ def check(company, f, before=None, model=None, save=None):
     save = save or db.save_jobs
     # after the first check only the newest jobs matter
     newest = PAGED_NEWEST.get(company["platform"], NEWEST) if company["first_run_done"] else FIRST_CHECK
+    mark = lambda ids: hashlib.sha1("\n".join(sorted(ids)).encode()).hexdigest()[:16]
+    # workday limits how often it is asked, so its five pages are only read when the first one changed
+    top = fetchers.peek(company) if company["first_run_done"] else None
+    if top is not None and mark(top) == (before or {}).get("ids_hash"):
+        return 0, (before or {}).get("last_job_count") or 0, mark(top)
     jobs = list({j.id: j for j in fetchers.fetch_list(company, newest)}.values())
-    fingerprint = hashlib.sha1("\n".join(sorted(j.id for j in jobs)).encode()).hexdigest()[:16]
+    fingerprint = mark(j.id for j in jobs) if top is None else mark(top)
 
     if not company["first_run_done"]:
         db.save_jobs([_row(company, j) for j in jobs])
