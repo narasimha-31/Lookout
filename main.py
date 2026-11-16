@@ -177,10 +177,21 @@ def run():
     # companies sit on different job boards, so a few at once is still polite
     took, unsent = {}, []
 
+    refused, skipped = Counter(), Counter()
+
     def timed(c):
+        before = health.get(c["id"]) or {}
+        # a site that keeps answering 429 is refusing this machine, asking the rest only adds to it
+        if refused[c["platform"]] >= 5:
+            skipped[c["platform"]] += 1
+            return 0, 0, {"company_id": c["id"], **{k: before.get(k) for k in
+                                                    ("last_success_at", "last_job_count", "last_error", "ids_hash")}}, None
         start = time.monotonic()
         try:
-            return _one(c, f, health.get(c["id"]) or {}, model, unsent.extend)
+            result = _one(c, f, before, model, unsent.extend)
+            if result[1] and "429 Client Error" in (result[2]["last_error"] or ""):
+                refused[c["platform"]] += 1
+            return result
         finally:
             took[c["id"]] = (time.monotonic() - start, c["platform"])
 
@@ -189,6 +200,8 @@ def run():
         results = list(pool.map(timed, companies))
     slowest = ", ".join(f"{p} {s:.0f}s" for s, p in sorted(took.values(), reverse=True)[:10])
     print(f"work {sum(s for s, _ in took.values()):.0f}s over 12 workers, took {time.monotonic() - start:.0f}s, slowest {slowest}")
+    if skipped:
+        print("skipped after 429s " + ", ".join(f"{k} {v}" for k, v in skipped.items()))
     if unsent:
         _quietly(db.save_jobs, unsent)
     _quietly(db.save_health, [r[2] for r in results])

@@ -451,3 +451,18 @@ def test_posting_number_is_the_last_part_of_the_address():
     assert main._posting("https://jobs.lear.com/job/Southfield-Analyst-MI-48033/1457317533/") == "1457317533"
     assert main._posting("https://x/job/analyst/2026") is None
     assert main._posting("4618135") is None
+
+
+def test_a_site_that_turns_the_run_away_is_left_alone(world, monkeypatch, capsys):
+    monkeypatch.setattr(main.db, "companies", lambda: [company(i) for i in range(1, 41)])
+    asked = []
+
+    def refuse(c, newest=None):
+        asked.append(c["id"])
+        raise RuntimeError("429 Client Error: Too Many Requests")
+
+    monkeypatch.setattr(main.fetchers, "fetch_list", refuse)
+    main.run()
+    assert len(asked) <= 17
+    assert world["health"][40]["last_error"] is None
+    assert "skipped" in capsys.readouterr().out
