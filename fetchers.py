@@ -441,17 +441,23 @@ def _phenom_ddo(url, **kw):
 
 def _phenom_list(c):
     # phenom sites embed the search results in the page, 100 at a time
-    jobs = []
-    while True:
-        # unsorted results put new jobs anywhere, past the newest-200 window
-        data = _phenom_ddo(f"https://{c['board']}/search-results",
-                           params={"size": 100, "from": len(jobs), "sortBy": "Most recent"})
-        found = data.get("eagerLoadRefineSearch") or {}
-        posts = (found.get("data") or {}).get("jobs") or []
-        jobs += [Job(p["jobSeqNo"], p["title"], "; ".join(p.get("multi_location") or []) or p.get("location") or "",
-                     f"https://{c['board']}/job/{p['jobId']}", p) for p in posts]
-        if not posts or len(jobs) >= min(_cap(c), found.get("totalHits", 0)):
-            return jobs
+    jobs = {}
+    # a board posting a thousand store jobs a day gets searched one term at a time
+    for term in _terms(c):
+        got = 0
+        while True:
+            # unsorted results put new jobs anywhere, past the newest-200 window
+            data = _phenom_ddo(f"https://{c['board']}/search-results",
+                               params={"size": 100, "from": got, "sortBy": "Most recent", **({"keywords": term} if term else {})})
+            found = data.get("eagerLoadRefineSearch") or {}
+            posts = (found.get("data") or {}).get("jobs") or []
+            got += len(posts)
+            for p in posts:
+                jobs[p["jobSeqNo"]] = Job(p["jobSeqNo"], p["title"], "; ".join(p.get("multi_location") or []) or p.get("location") or "",
+                                          f"https://{c['board']}/job/{p['jobId']}", p)
+            if not posts or got >= min(_cap(c), found.get("totalHits", 0)):
+                break
+    return list(jobs.values())
 
 
 def _phenom_detail(c, job):

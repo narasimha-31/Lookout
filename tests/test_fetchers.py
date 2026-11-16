@@ -647,3 +647,14 @@ def test_workday_posting_country_only_when_abroad(monkeypatch):
     job = Job("/b", "Associate Analyst, Real-Time Desk", "2 Locations", "")
     fetchers._workday_detail(c, job)
     assert job.location == "2 Locations"
+
+
+def test_phenom_searches_huge_boards_by_term(monkeypatch):
+    calls = []
+    post = {"jobSeqNo": "A1", "jobId": "1", "title": "Analyst, Strategy and Operations", "location": "Remote"}
+    listing = 'x phApp.ddo = {"eagerLoadRefineSearch": {"totalHits": 1, "data": {"jobs": [%s]}}}; phApp.sessionParams = {};' % json.dumps(post)
+    monkeypatch.setattr(fetchers, "http", fake_http({"search-results": Resp(text=listing)}, calls))
+    c = {"platform": "phenom", "board": "jobs.cvshealth.com/us/en", "overrides": {"search_texts": ["analyst", "engineer"]}}
+    # the same job found under two terms is listed once
+    assert [j.id for j in fetchers.fetch_list(c, 200)] == ["A1"]
+    assert [k[2]["params"].get("keywords") for k in calls] == ["analyst", "engineer"]
