@@ -112,6 +112,13 @@ def is_repost(company_id, title, location):
     return bool(rows)
 
 
+def emailed_like(company_id, part):
+    rows = http("GET", _url("seen_jobs"), headers=_headers(), params={
+        "select": "id", "company_id": f"eq.{company_id}", "emailed": "eq.true",
+        "external_job_id": f"like.*{part}*", "limit": "1"}).json()
+    return bool(rows)
+
+
 def save_jobs(rows):
     for i in range(0, len(rows), 2000):
         http("POST", _url("seen_jobs"), headers=_headers("resolution=ignore-duplicates,return=minimal"),

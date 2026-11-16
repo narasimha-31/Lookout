@@ -31,6 +31,8 @@ def world(monkeypatch):
     monkeypatch.setattr(main.db, "mark_first_run", lambda cid: w["marked"].append(cid))
     monkeypatch.setattr(main.db, "is_repost", lambda cid, t, loc: any(
         r["title"] == t and r["location"] == loc for r in w["saved"]))
+    monkeypatch.setattr(main.db, "emailed_like", lambda cid, part: any(
+        r["emailed"] and part in r["external_job_id"] for r in w["saved"]))
     monkeypatch.setattr(main.db, "all_health", lambda: {k: dict(v) for k, v in w["health"].items()})
     monkeypatch.setattr(main.db, "save_health", lambda rows: [w["health"].__setitem__(r["company_id"], r) for r in rows])
     monkeypatch.setattr(main.db, "filters", lambda: w.get("filters", F))
@@ -432,3 +434,20 @@ def test_unchanged_first_page_skips_the_full_read(world, monkeypatch):
     assert (sent, count) == (2, 2)
     monkeypatch.setattr(main.fetchers, "fetch_list", lambda c, newest=None: 1 / 0)
     assert main.check(c, F, {"ids_hash": top, "last_job_count": 2}) == (0, 2, top)
+
+
+def test_retitled_posting_is_not_emailed_again(world):
+    a = "https://jobs.mdanderson.org/search/jobdetails/data-engineer---data--al-solution/ffa7ddf0-b647-43fe-8acb-6faf314ec977"
+    b = a.replace("--al-", "--ai-")
+    world["jobs"] = [Job(a, "Data Engineer", "Houston, TX", a)]
+    assert main.check(company(), F)[0] == 1
+    world["jobs"] = [Job(b, "Data Engineer", "Houston, TX", b)]
+    assert main.check(company(), F)[0] == 0
+    assert len(world["sent"]) == 1
+
+
+def test_posting_number_is_the_last_part_of_the_address():
+    assert main._posting("https://careers.unitedhealthgroup.com/job/plymouth/data-analyst/34088/103166226304") == "103166226304"
+    assert main._posting("https://jobs.lear.com/job/Southfield-Analyst-MI-48033/1457317533/") == "1457317533"
+    assert main._posting("https://x/job/analyst/2026") is None
+    assert main._posting("4618135") is None

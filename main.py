@@ -37,6 +37,12 @@ def _row(company, job, emailed=False, repost=False, description=None, score=None
             "url": job.url, "emailed": emailed, "possible_repost": repost, "description": description, "fit": score}
 
 
+def _posting(job_id):
+    # the number a web address ends in stays the same when the title in it is edited
+    last = job_id.rstrip("/").rsplit("/", 1)[-1] if job_id.startswith("http") else ""
+    return last if fetchers.GUID.fullmatch(last) or re.fullmatch(r"\d{6,}", last) else None
+
+
 def check(company, f, before=None, model=None, save=None):
     """Returns (emails sent, jobs listed, fingerprint of the job list)."""
     f = {**f, **{k: v for k, v in (company.get("overrides") or {}).items() if k in f}}
@@ -89,6 +95,11 @@ def check(company, f, before=None, model=None, save=None):
                 or not flt.location_ok(job.location, f)
                 or flt.abroad(job.location, text if job.location else f"{job.title}\n{text}", f)
                 or (years is not None and years > flt.max_years(job.title))):
+            save([_row(company, job)])
+            continue
+        # an edited title changes the address of a posting already sent
+        number = _posting(job.id)
+        if number and db.emailed_like(company["id"], number):
             save([_row(company, job)])
             continue
         repost = db.is_repost(company["id"], job.title, job.location)
