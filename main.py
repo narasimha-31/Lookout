@@ -182,8 +182,11 @@ def run():
     down = [r[3][:2] for r in results if r[3] and known[r[3][2]] <= 3]
     # a whole job site going down is one piece of news, not a hundred
     if len(down) > 3:
+        # the kind of error says whether it is an outage or the site turning us away
+        kinds = Counter(re.sub(r" for url.*|https?://\S+|\(host=.*", "", body.split("\n\n")[-1])[:80] for _, body in down)
         _quietly(mail.send, mail.notice(f"{len(down)} job boards are not responding",
                                         "Down for over an hour or returning no jobs. Often maintenance.\n\n"
+                                        + "\n".join(f"{n} x {k}" for k, n in kinds.most_common()) + "\n\n"
                                         + "\n".join(subject for subject, _ in down)))
     else:
         for subject, body in down:
