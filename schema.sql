@@ -50,7 +50,8 @@ create table company_health (
   last_success_at timestamptz,
   last_job_count int,
   last_error text,
-  ids_hash text
+  ids_hash text,
+  deep_at timestamptz
 );
 
 -- job lists sent by a browser button for sites that block automated visits

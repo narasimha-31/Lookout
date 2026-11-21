@@ -20,6 +20,7 @@ NEWEST = 200
 PAGED_NEWEST = {"workday": 100, "dejobs": 50}
 # vc boards list tens of thousands of jobs worldwide
 FIRST_CHECK = 2000
+DEEP_PER_RUN = 20
 
 
 def load_env(path=".env"):
@@ -44,16 +45,16 @@ def _posting(job_id):
     return last if fetchers.GUID.fullmatch(last) or re.fullmatch(r"\d{6,}", last) else None
 
 
-def check(company, f, before=None, model=None, save=None):
+def check(company, f, before=None, model=None, save=None, deep=False):
     """Returns (emails sent, jobs listed, fingerprint of the job list)."""
     f = {**f, **{k: v for k, v in (company.get("overrides") or {}).items() if k in f}}
     # a run hands in one list, so unsent rows from every company go to the database together
     save = save or db.save_jobs
     # after the first check only the newest jobs matter
-    newest = PAGED_NEWEST.get(company["platform"], NEWEST) if company["first_run_done"] else FIRST_CHECK
+    newest = PAGED_NEWEST.get(company["platform"], NEWEST) if company["first_run_done"] and not deep else FIRST_CHECK
     mark = lambda ids: hashlib.sha1("\n".join(sorted(ids)).encode()).hexdigest()[:16]
     # workday limits how often it is asked, so its five pages are only read when the first one changed
-    top = fetchers.peek(company) if company["first_run_done"] else None
+    top = fetchers.peek(company) if company["first_run_done"] and not deep else None
     if top is not None and mark(top) == (before or {}).get("ids_hash"):
         return 0, (before or {}).get("last_job_count") or 0, mark(top)
     jobs = list({j.id: j for j in fetchers.fetch_list(company, newest)}.values())
@@ -137,13 +138,13 @@ def _quietly(fn, *args, **kw):
         return None
 
 
-def _one(c, f, before, model=None, save=None):
+def _one(c, f, before, model=None, save=None, deep=False):
     """Returns (emails sent, failed, health row, down alert)."""
     row = {"company_id": c["id"], "last_success_at": before.get("last_success_at"),
            "last_job_count": before.get("last_job_count"), "last_error": before.get("last_error"),
-           "ids_hash": before.get("ids_hash")}
+           "ids_hash": before.get("ids_hash"), "deep_at": before.get("deep_at")}
     try:
-        n, count, fingerprint = check(c, f, before, model, save)
+        n, count, fingerprint = check(c, f, before, model, save, deep)
     except Exception as e:
         error = f"{type(e).__name__}: {e}"[:1000]
         last_ok = before.get("last_success_at")
@@ -159,7 +160,8 @@ def _one(c, f, before, model=None, save=None):
         alert = (f"{c['name']} returned zero jobs", "The job board returned no jobs. It may be under maintenance, "
                  "have nothing posted right now, or have moved to a new address.", c["platform"])
     return n, 0, {**row, "last_success_at": datetime.now(timezone.utc).isoformat(), "last_job_count": count,
-                  "last_error": None, "ids_hash": fingerprint}, alert
+                  "last_error": None, "ids_hash": fingerprint,
+                  "deep_at": datetime.now(timezone.utc).isoformat() if deep else row["deep_at"]}, alert
 
 
 def workday_down(now=None):
@@ -179,6 +181,12 @@ def run():
     took, unsent = {}, []
 
     refused, skipped = Counter(), Counter()
+    # some workday boards are not sorted newest first, so a new job can sit past the pages read every run
+    hour_ago = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
+    due = [c for c in companies if (c.get("overrides") or {}).get("unsorted") and c["first_run_done"]
+           and ((health.get(c["id"]) or {}).get("deep_at") or "") < hour_ago]
+    # the longest waiting first, a few per run so one run never asks a site for thousands of pages
+    deep = {c["id"] for c in sorted(due, key=lambda c: (health.get(c["id"]) or {}).get("deep_at") or "")[:DEEP_PER_RUN]}
 
     def timed(c):
         before = health.get(c["id"]) or {}
@@ -186,10 +194,10 @@ def run():
         if refused[c["platform"]] >= 5:
             skipped[c["platform"]] += 1
             return 0, 0, {"company_id": c["id"], **{k: before.get(k) for k in
-                                                    ("last_success_at", "last_job_count", "last_error", "ids_hash")}}, None
+                                                    ("last_success_at", "last_job_count", "last_error", "ids_hash", "deep_at")}}, None
         start = time.monotonic()
         try:
-            result = _one(c, f, before, model, unsent.extend)
+            result = _one(c, f, before, model, unsent.extend, c["id"] in deep)
             if result[1] and "429 Client Error" in (result[2]["last_error"] or ""):
                 refused[c["platform"]] += 1
             return result

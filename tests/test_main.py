@@ -472,3 +472,15 @@ def test_long_location_is_cut_to_fit_the_index(world):
     world["jobs"] = [job(1, title="Nurse", loc="Houston, TX; " * 500)]
     main.check(company(), F)
     assert len(world["saved"][0]["location"]) == 500
+
+
+def test_unsorted_workday_board_gets_a_full_read_each_hour(world, monkeypatch):
+    c = {**company(), "platform": "workday", "overrides": {"unsorted": True}}
+    monkeypatch.setattr(main.db, "companies", lambda: [c])
+    asked = []
+    monkeypatch.setattr(main.fetchers, "fetch_list", lambda c, newest=None: asked.append(newest) or [job(1)])
+    main.run()
+    assert asked == [main.FIRST_CHECK]
+    assert world["health"][1]["deep_at"]
+    main.run()
+    assert asked[-1] == main.PAGED_NEWEST["workday"]
