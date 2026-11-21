@@ -51,7 +51,8 @@ def check(company, f, before=None, model=None, save=None, deep=False):
     # a run hands in one list, so unsent rows from every company go to the database together
     save = save or db.save_jobs
     # after the first check only the newest jobs matter
-    newest = PAGED_NEWEST.get(company["platform"], NEWEST) if company["first_run_done"] and not deep else FIRST_CHECK
+    paged = (company.get("overrides") or {}).get("newest") or PAGED_NEWEST.get(company["platform"], NEWEST)
+    newest = paged if company["first_run_done"] and not deep else FIRST_CHECK
     mark = lambda ids: hashlib.sha1("\n".join(sorted(ids)).encode()).hexdigest()[:16]
     # workday limits how often it is asked, so its five pages are only read when the first one changed
     top = fetchers.peek(company) if company["first_run_done"] and not deep else None

@@ -385,6 +385,15 @@ def test_paged_boards_read_fewer_jobs(world, monkeypatch):
     assert asked == [("workday", 100), ("greenhouse", 200), ("workday", 2000)]
 
 
+def test_board_with_small_pages_reads_its_own_newest(world, monkeypatch):
+    asked = []
+    monkeypatch.setattr(main.fetchers, "fetch_list", lambda c, newest=None: asked.append(newest) or [])
+    c = {**company(), "platform": "avature", "overrides": {"newest": 30}}
+    main.check(c, F)
+    main.check({**c, "first_run_done": False}, F)
+    assert asked == [30, 2000]
+
+
 def test_many_boards_down_send_one_email(world, monkeypatch):
     monkeypatch.setattr(main.db, "companies", lambda: [company(i) for i in range(1, 6)])
     world["fail"] = {1, 2, 3, 4, 5}
