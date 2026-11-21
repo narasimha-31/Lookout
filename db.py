@@ -190,7 +190,9 @@ def failing():
     rows = http("GET", _url("company_health"), headers=_headers(),
                 params={"select": "last_error,companies!inner(name)", "last_error": "not.is.null",
                         "companies.active": "is.true"}).json()
-    return [f"{r['companies']['name']}: {r['last_error'][:150]}" for r in rows]
+    # a 429 from one run's machine clears on the next, only one lasting an hour is news
+    return [f"{r['companies']['name']}: {r['last_error'][:150]}" for r in rows
+            if "429 Client Error" not in r["last_error"] or r["last_error"].startswith("notified: ")]
 
 
 def all_health():

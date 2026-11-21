@@ -33,7 +33,8 @@ def load_env(path=".env"):
 
 
 def _row(company, job, emailed=False, repost=False, description=None, score=None):
-    return {"company_id": company["id"], "external_job_id": job.id, "title": job.title, "location": job.location,
+    # a posting listing dozens of offices overflows the database index
+    return {"company_id": company["id"], "external_job_id": job.id, "title": job.title[:300], "location": job.location[:500],
             "url": job.url, "emailed": emailed, "possible_repost": repost, "description": description, "fit": score}
 
 
@@ -102,7 +103,7 @@ def check(company, f, before=None, model=None, save=None):
         if number and db.emailed_like(company["id"], number):
             save([_row(company, job)])
             continue
-        repost = db.is_repost(company["id"], job.title, job.location)
+        repost = db.is_repost(company["id"], job.title[:300], job.location[:500])
         flags = [f"asks for {years} years" if years is not None else "no experience mentioned"]
         if repost:
             flags.append("possible repost")

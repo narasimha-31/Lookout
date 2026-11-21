@@ -466,3 +466,9 @@ def test_a_site_that_turns_the_run_away_is_left_alone(world, monkeypatch, capsys
     assert len(asked) <= 17
     assert world["health"][40]["last_error"] is None
     assert "skipped" in capsys.readouterr().out
+
+
+def test_long_location_is_cut_to_fit_the_index(world):
+    world["jobs"] = [job(1, title="Nurse", loc="Houston, TX; " * 500)]
+    main.check(company(), F)
+    assert len(world["saved"][0]["location"]) == 500
