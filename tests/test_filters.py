@@ -185,6 +185,9 @@ def test_min_years():
     assert years_required("3+ years of experience") == 3
     assert years_required("4+ years experience required") == 4
     assert years_required("2-4 years of relevant experience") == 2
+    # nrg left the word years out
+    assert years_required("Minimum of 4 of experience in compensation analysis, including experience supporting "
+                          "or administering sales compensation or incentive plans.") == 4
     assert years_required("Experience: 5 years preferred, 1 year required") == 1
     assert years_required("three (3) years of experience") == 3
     assert years_required("a minimum of 5+ years of field sales experience and at least 2 years of experience selling") == 5

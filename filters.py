@@ -5,7 +5,7 @@ NUMBER_WORDS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, 
                 "nine": 9, "ten": 10}
 YEARS = re.compile(r"(?<![\d.])(\d{1,2}|" + "|".join(NUMBER_WORDS) + r")\s*\+?\s*(?:\(\d{1,2}\)\s*)?"
                    r"(?:(?:-|–|to)\s*(?:\d{1,2}|" + "|".join(NUMBER_WORDS) + r")\s*\+?\s*)?"
-                   r"(?:(?:or more|or greater|plus)\s+)?(?:years?|yrs?)\b", re.I)
+                   r"(?:(?:or more|or greater|plus)\s+)?(?:(?:years?|yrs?)\b|(?=\s+of\s+experience))", re.I)
 # "$115, 000" shows up with a stray space after the comma
 NUM = r"(?:\d{1,3}(?:,\s?\d{3})+|\d+)(?:\.\d+)?"
 PAY = re.compile(rf"\$\s?{NUM}\s*[kK]?(?:\s*(?:-|–|to)\s*\$?\s?{NUM}\s*[kK]?)?")
