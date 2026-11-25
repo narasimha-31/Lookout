@@ -1,9 +1,7 @@
 name: roles
 
-# every 3 hours
+# run by hand until there is a brave key
 on:
-  schedule:
-    - cron: "20 */3 * * *"
   workflow_dispatch:
 
 jobs:
