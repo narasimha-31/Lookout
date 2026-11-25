@@ -668,3 +668,18 @@ def test_workday_peek_reads_one_page(monkeypatch):
     assert fetchers.peek(c) == [f"/job/{i}" for i in range(20)]
     assert len(calls) == 1
     assert fetchers.peek({"platform": "greenhouse", "board": "acme"}) is None
+
+
+def test_rmk_search_newest_first(monkeypatch):
+    row = ('<tr class="data-row"><td class="colTitle"><span class="jobTitle hidden-phone">'
+           '<a href="/job/Manchester-Pricing-Analyst-Manchester%2C-NH-NH-03109-5311/1453222800/" class="jobTitle-link">'
+           'Manchester Pricing Analyst</a></span></td><td class="colLocation hidden-phone"><span class="jobLocation">\n'
+           '            Manchester, NH, US, 03109\n        </span></td></tr>')
+    calls = []
+    pages = iter([Resp(text=row * 2), Resp(text="")])
+    monkeypatch.setattr(fetchers, "http", fake_http({"/search/": lambda kw: next(pages)}, calls))
+    jobs = fetchers.fetch_list({"platform": "rmk", "board": "careers.hubbell.com"})
+    assert [(j.id, j.title, j.location) for j in jobs] == [(
+        "https://careers.hubbell.com/job/Manchester-Pricing-Analyst-Manchester%2C-NH-NH-03109-5311/1453222800/",
+        "Manchester Pricing Analyst", "Manchester, NH")]
+    assert calls[0][2]["params"]["sortColumn"] == "referencedate"
