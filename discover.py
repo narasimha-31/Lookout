@@ -100,8 +100,8 @@ ROLE_QUERIES = ["data analyst", "business intelligence analyst", "data engineer"
                 "credit analyst", "investment analyst", "operations analyst", "marketing analyst", "sales operations analyst",
                 "product analyst", "energy analyst", "commodity analyst", "gis analyst", "sap analyst", "data governance analyst"]
 SITES = ["jobs.ashbyhq.com", "job-boards.greenhouse.io", "jobs.lever.co", "myworkdayjobs.com"]
-# brave's free plan is 2000 a month, 8 runs a day of 6 stays under it
-PER_RUN = 6
+# brave gives 1000 free a month, 8 runs a day of 4 stays under it
+PER_RUN = 4
 MAX_ADDS = 10
 
 
