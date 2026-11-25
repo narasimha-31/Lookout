@@ -147,8 +147,13 @@ def test_getro_keeps_startup_name(monkeypatch):
     riga = {"id": 6, "title": "Consulting Analyst", "locations": ["Riga, Latvia"], "url": "https://x/6",
             "organization": {"name": "Pismo"}, "searchable_locations": ["Riga, Latvia", "Latvia"]}
     monkeypatch.setattr(fetchers, "http", fake_http({"search/jobs": Resp({"results": {"jobs": [post, riga], "count": 2}})}, calls))
+    slept = []
+    monkeypatch.setattr(fetchers.time, "sleep", slept.append)
     jobs = fetchers.fetch_list({"platform": "getro", "board": "8672"})
     assert (jobs[0].id, jobs[0].company, jobs[0].location) == ("5", "Startup Co", "Austin, TX, USA")
+    # boards share one api, each page waits its turn
+    assert slept and fetchers.GETRO_TURN.acquire(blocking=False)
+    fetchers.GETRO_TURN.release()
 
 
 def test_consider_years_from_field():

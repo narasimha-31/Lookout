@@ -9,6 +9,7 @@ import requests
 from threading import Lock
 
 DEJOBS_TURN = Lock()
+GETRO_TURN = Lock()
 
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
 
@@ -331,8 +332,11 @@ def _getro_list(c):
     _, coll = _getro_parts(c)
     jobs, page = [], 0
     while True:
-        data = http("POST", f"https://api.getro.com/api/v2/collections/{coll}/search/jobs",
-                    json={"hitsPerPage": 100, "page": page, "filters": "", "query": ""}).json()
+        # twenty odd vc boards share getro's api, so take turns or it answers 429
+        with GETRO_TURN:
+            data = http("POST", f"https://api.getro.com/api/v2/collections/{coll}/search/jobs",
+                        json={"hitsPerPage": 100, "page": page, "filters": "", "query": ""}).json()
+            time.sleep(0.5)
         res = data.get("results") or {}
         posts = res.get("jobs") or []
         jobs += [Job(str(p["id"]), p["title"], "; ".join(p.get("locations") or []), p["url"], p,
