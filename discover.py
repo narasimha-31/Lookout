@@ -1,5 +1,7 @@
 import html
+import os
 import re
+import time
 from concurrent.futures import ThreadPoolExecutor
 
 import db
@@ -91,6 +93,83 @@ def discover():
     print(f"{len(fresh)} new names, {len(found)} with boards, {len(added)} added, {len(blocked)} blocked")
 
 
+# role phrases across the tracked areas; each run takes the next few with each site
+ROLE_QUERIES = ["data analyst", "business intelligence analyst", "data engineer", "analytics engineer", "business analyst",
+                "reporting analyst", "financial analyst", "fp&a analyst", "supply chain analyst", "demand planner",
+                "procurement analyst", "inventory analyst", "pricing analyst", "revenue analyst", "risk analyst",
+                "credit analyst", "investment analyst", "operations analyst", "marketing analyst", "sales operations analyst",
+                "product analyst", "energy analyst", "commodity analyst", "gis analyst", "sap analyst", "data governance analyst"]
+SITES = ["jobs.ashbyhq.com", "job-boards.greenhouse.io", "jobs.lever.co", "myworkdayjobs.com"]
+# brave's free plan is 2000 a month, 8 runs a day of 6 stays under it
+PER_RUN = 6
+MAX_ADDS = 10
+
+
+def board_from_url(url):
+    m = re.match(r"https://jobs\.ashbyhq\.com/([\w.-]+)", url)
+    if m:
+        return "ashby", m[1].lower(), None
+    m = re.match(r"https://(?:job-boards|boards)\.greenhouse\.io/(\w[\w-]*)/jobs/", url)
+    if m:
+        return "greenhouse", m[1].lower(), None
+    m = re.match(r"https://jobs\.lever\.co/([\w.-]+)/", url)
+    if m:
+        return "lever", m[1].lower(), None
+    m = re.match(r"https://([\w-]+)\.(wd\d+)\.myworkdayjobs\.com/(?:[a-z]{2}-[A-Z]{2}/)?([\w-]+)/job/", url)
+    if m:
+        return "workday", f"{m[1]}.{m[2]}.myworkdayjobs.com/{m[1]}", m[3]
+    return None
+
+
+def _search(q):
+    data = fetchers.http("GET", "https://api.search.brave.com/res/v1/web/search", params={"q": q, "count": 20, "freshness": "pw"},
+                         headers={"X-Subscription-Token": os.environ["BRAVE_KEY"], "Accept": "application/json"}).json()
+    return [r["url"] for r in (data.get("web") or {}).get("results") or []]
+
+
+def role_search(run=None):
+    if not os.environ.get("BRAVE_KEY"):
+        return
+    run = int(time.time() // 10800) if run is None else run
+    pairs = [(site, role) for role in ROLE_QUERIES for site in SITES]
+    found = {}
+    for i in range(PER_RUN):
+        site, role = pairs[(run * PER_RUN + i) % len(pairs)]
+        try:
+            urls = _search(f'site:{site} "{role}"')
+        except Exception:
+            urls = []
+        for u in urls:
+            b = board_from_url(u)
+            if b:
+                found.setdefault(b[1], b)
+        # free plan allows one search a second
+        time.sleep(1.1)
+    f, seen = db.filters(), db.known()
+    added = []
+    for platform, board, site in found.values():
+        if len(added) >= MAX_ADDS:
+            break
+        slug = board.split("/")[-1]
+        name = re.sub(r"[-_.]+", " ", slug).title()
+        if board in seen or name.lower() in seen or flt.offshore(name):
+            continue
+        c = {"name": name, "platform": platform, "board": board, "site": site, "overrides": {}}
+        try:
+            active, why = judge(c, f)
+        except Exception:
+            continue
+        if not active:
+            continue
+        # the first read only saves what is open; just later postings get mailed
+        if db.add_company({**c, "active": True, "first_run_done": False, "note": None}):
+            added.append(f"{name} ({platform}): {why}")
+    if added:
+        mail.send(mail.notice(f"Lookout found {len(added)} new companies by role", "Added from job search:\n" + "\n".join(added)))
+    print(f"{len(found)} boards in search, {len(added)} added")
+
+
 if __name__ == "__main__":
     load_env()
-    discover()
+    import sys
+    role_search() if "--roles" in sys.argv else discover()
